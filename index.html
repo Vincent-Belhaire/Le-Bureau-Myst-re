@@ -140,7 +140,8 @@
         <div class="arena-top"><span class="round-pill teal-pill">CODE <span id="typingRound">1</span> / 3</span><span id="typingStatus">Observe avant d’écrire</span></div>
         <p class="copy-model" id="typingModel">Élève n°6 : prénom.nom@college.example - 12,50 € / 20 ?</p>
         <label for="typingInput">Ta saisie</label>
-        <input id="typingInput" class="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Écris ici…">
+        <input id="typingInput" class="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="typingPasteLock typingCounter typingCompare" placeholder="Écris ici…">
+        <p class="paste-lock" id="typingPasteLock">🔒 Copier-coller et glisser-déposer désactivés : tape le code au clavier.</p>
         <div class="typing-meta"><span id="typingCounter">0 caractère</span><span id="typingCompare">Chaque signe compte.</span></div>
         <div class="inline-actions"><button class="secondary-button compact" id="typingClear" type="button">Effacer</button><button class="primary-button" id="typingValidate" type="button">Vérifier ma saisie</button></div>
       </div>
@@ -162,7 +163,8 @@
         <div class="error-ticket">
           <div class="ticket-top"><span>FICHE À RÉPARER</span><span id="correctionRound">1 / 3</span></div>
           <label for="correctionInput">Texte de Pixel</label>
-          <textarea id="correctionInput" rows="4" spellcheck="false">Le clavier est prêt!!</textarea>
+          <textarea id="correctionInput" rows="4" spellcheck="false" aria-describedby="correctionPasteLock">Le clavier est prêt!!</textarea>
+          <p class="paste-lock" id="correctionPasteLock">🔒 Le collage est désactivé : corrige uniquement avec Retour arrière ou Suppr.</p>
           <p class="target-line"><span>Texte attendu</span><strong id="correctionTarget">Le clavier est prêt !</strong></p>
         </div>
         <div class="key-choice" aria-label="Touches utiles">
@@ -257,7 +259,7 @@
       </div>
       <div class="instruction-card chrono-card">
         <span class="instruction-number">★</span>
-        <div><p class="instruction-label">BONUS FACULTATIF · 60 SECONDES</p><p>Recopie 3 codes exactement. Le chrono démarre uniquement quand tu es prêt.</p></div>
+        <div><p class="instruction-label">BONUS FACULTATIF · 60 SECONDES</p><p>Recopie 3 codes exactement au clavier. Le copier-coller est désactivé et le chrono démarre uniquement quand tu es prêt.</p></div>
       </div>
 
       <div class="chrono-arena">
@@ -266,7 +268,8 @@
           <div class="arena-top"><span class="round-pill coral-round">CODE <span id="bonusRound">1</span> / 3</span><span id="bonusScore">0 code validé</span></div>
           <p class="copy-model small-model" id="bonusModel">Robot n°4 : prêt ?</p>
           <label for="bonusInput">Ta saisie</label>
-          <input id="bonusInput" class="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" disabled placeholder="Le chrono n’a pas commencé…">
+          <input id="bonusInput" class="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="bonusPasteLock" disabled placeholder="Le chrono n’a pas commencé…">
+          <p class="paste-lock" id="bonusPasteLock">🔒 Copier-coller et glisser-déposer désactivés pendant le chrono.</p>
           <div class="inline-actions">
             <button class="secondary-button compact" id="skipBonus" type="button">Passer le bonus</button>
             <button class="primary-button" id="startTimer" type="button">Je suis prêt !</button>

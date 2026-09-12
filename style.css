@@ -219,6 +219,7 @@ kbd { display: inline-block; border: 1px solid #aaa3ba; border-bottom-width: 4px
 .typing-input { width: 100%; min-height: 60px; border: 2px solid var(--ink); border-radius: 12px; padding: 14px 16px; background: white; color: var(--ink); font-family: "Trebuchet MS", Arial, sans-serif; font-size: 1.05rem; }
 .typing-input.input-good { border-color: #167d6c; box-shadow: 0 0 0 4px rgba(34,184,160,.16); }
 .typing-input.input-bad { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(255,93,115,.14); }
+.paste-lock { margin: 8px 0 0; color: #7a3140; font-size: .78rem; font-weight: 800; }
 .typing-meta { display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: var(--muted); font-size: .86rem; }
 .inline-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 

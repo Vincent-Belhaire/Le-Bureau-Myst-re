@@ -30,6 +30,8 @@ Le score maximal est de **5 600 points** : 1 000 points par défi obligatoire et
 ## Notes pédagogiques
 
 - La saisie exacte est comparée caractère par caractère, espaces et casse compris.
+- Le collage et le glisser-déposer sont bloqués dans la saisie exacte, la correction et le bonus chronométré. Une tentative affiche une explication et applique un malus de 25 points dans le défi concerné.
+- Le mini-jeu des raccourcis conserve volontairement `Ctrl+C` et `Ctrl+V`, puisqu’il sert précisément à apprendre ces commandes.
 - Le clavier dessiné représente un AZERTY scolaire simplifié ; certaines machines peuvent avoir une disposition légèrement différente.
 - Dans le défi 4, les touches montrent la position réelle des signes : en haut avec **Maj**, en bas à droite avec **Alt Gr**, et en bas à gauche avec la touche seule. Pour `:`, les commandes se désactivent automatiquement afin que l’élève clique directement sur la bonne touche.
 - Le site rappelle que **Maj** agit pendant qu’on la maintient, tandis que **Verr. Maj** reste actif jusqu’au prochain appui.

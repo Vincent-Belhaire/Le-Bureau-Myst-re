@@ -105,6 +105,26 @@
     showToast.timeout = window.setTimeout(() => toast.classList.remove("show"), 2100);
   }
 
+  function protectManualEntry(input, category, feedback, message) {
+    let lastBlockedAt = 0;
+    const blockInsertion = event => {
+      event.preventDefault();
+      const now = Date.now();
+      if (now - lastBlockedAt < 450) return;
+      lastBlockedAt = now;
+      applyPenalty(category, 25);
+      input.classList.add("input-bad");
+      window.setTimeout(() => input.classList.remove("input-bad"), 650);
+      setFeedback(feedback, message, "error");
+    };
+
+    input.addEventListener("paste", blockInsertion);
+    input.addEventListener("drop", blockInsertion);
+    input.addEventListener("beforeinput", event => {
+      if (event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop") blockInsertion(event);
+    });
+  }
+
   function showScreen(id) {
     if (state.screen === "bonus" && id !== "bonus" && state.timer) {
       window.clearInterval(state.timer);
@@ -256,11 +276,7 @@
   }
 
   typingInput.addEventListener("input", updateTypingLive);
-  typingInput.addEventListener("paste", event => {
-    event.preventDefault();
-    applyPenalty("typing", 25);
-    setFeedback(typingFeedback, "Ici, le but est de t’entraîner à taper : le collage est désactivé pour ce défi.", "error");
-  });
+  protectManualEntry(typingInput, "typing", typingFeedback, "Le collage est bloqué dans ce défi : recopie le modèle avec le clavier.");
   typingInput.addEventListener("keydown", event => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -339,6 +355,8 @@
   const correctionFeedback = document.getElementById("correctionFeedback");
   const correctionValidate = document.getElementById("correctionValidate");
   const correctionNext = document.getElementById("correctionNext");
+
+  protectManualEntry(correctionInput, "correction", correctionFeedback, "Le collage est bloqué ici : utilise Retour arrière ou Suppr pour réparer le texte.");
 
   function loadCorrectionTask() {
     const task = correctionTasks[state.correctionIndex];
@@ -555,6 +573,8 @@
   const finishButton = document.getElementById("finishButton");
   const bonusFeedback = document.getElementById("bonusFeedback");
 
+  protectManualEntry(bonusInput, "bonus", bonusFeedback, "Le collage est bloqué pendant le chrono : tape chaque code au clavier.");
+
   function updateBonusCount() {
     bonusScore.textContent = `${state.bonusCodes} code${state.bonusCodes > 1 ? "s" : ""} validé${state.bonusCodes > 1 ? "s" : ""}`;
   }
@@ -747,7 +767,7 @@
     },
     chrono: {
       title: "Rester précis avec le chrono",
-      html: `<ul><li>Lis le code entier avant de lancer.</li><li>Écris par petits groupes.</li><li>Valide avec le bouton ou la touche Entrée.</li><li>Si tu te trompes, corrige seulement la zone indiquée.</li></ul><div class="help-card amber-help"><strong>Important :</strong> le bonus ne retire jamais de points. La précision reste plus importante que la vitesse.</div>`
+      html: `<ul><li>Lis le code entier avant de lancer.</li><li>Écris par petits groupes.</li><li>Valide avec le bouton ou la touche Entrée.</li><li>Si tu te trompes, corrige seulement la zone indiquée.</li></ul><div class="help-card amber-help"><strong>Important :</strong> le copier-coller et le glisser-déposer sont bloqués. Une tentative retire 25 points du bonus, mais ne touche jamais au score principal.</div>`
     },
     welcome: {
       title: "Comment fonctionne la mission ?",
