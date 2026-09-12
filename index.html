@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Le Bureau Mystère : une mission TICE interactive pour apprendre à utiliser un ordinateur en 6e.">
+  <meta name="description" content="Clavier Chrono : une mission TICE interactive pour maîtriser le clavier en 6e.">
   <meta name="theme-color" content="#2c2a4a">
-  <title>Le Bureau Mystère · Mission TICE 6e</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232c2a4a'/%3E%3Crect x='12' y='14' width='40' height='28' rx='5' fill='%23fff' stroke='%23ffb627' stroke-width='4'/%3E%3Cpath d='M24 51h16M32 42v9' stroke='%2322b8a0' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>Clavier Chrono · Mission TICE 6e</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232c2a4a'/%3E%3Crect x='8' y='16' width='48' height='34' rx='6' fill='%23fff' stroke='%23ffb627' stroke-width='4'/%3E%3Cg fill='%236c63ff'%3E%3Crect x='14' y='23' width='7' height='6' rx='2'/%3E%3Crect x='24' y='23' width='7' height='6' rx='2'/%3E%3Crect x='34' y='23' width='7' height='6' rx='2'/%3E%3Crect x='44' y='23' width='6' height='6' rx='2'/%3E%3C/g%3E%3Crect x='18' y='35' width='28' height='7' rx='3' fill='%2322b8a0'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,8 +14,8 @@
 
   <header class="site-header">
     <button class="brand" id="homeButton" type="button" aria-label="Retour à l’accueil">
-      <span class="brand-mark" aria-hidden="true">⌁</span>
-      <span>Le Bureau <strong>Mystère</strong></span>
+      <span class="brand-mark" aria-hidden="true">⌨</span>
+      <span>Clavier <strong>Chrono</strong></span>
     </button>
     <div class="header-actions">
       <span class="level-pill">TICE · 6e</span>
@@ -25,7 +25,7 @@
 
   <div class="mission-bar" id="missionBar" hidden>
     <div class="mission-bar__inner">
-      <p id="stepLabel">Défi 1 sur 4</p>
+      <p id="stepLabel">Défi 1 sur 6</p>
       <div class="progress-track" role="progressbar" aria-label="Progression de la mission" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <span id="progressFill"></span>
       </div>
@@ -37,23 +37,23 @@
     <section class="screen welcome-screen is-active" id="welcome" data-screen="welcome">
       <div class="welcome-grid">
         <div class="welcome-copy">
-          <p class="eyebrow">MISSION TICE · SÉANCE 01</p>
-          <h1>Qui percera les secrets du <span>bureau&nbsp;?</span></h1>
-          <p class="lede">Pixel, le gardien du labo numérique, a mélangé les commandes. Relève ses défis pour remettre l’ordinateur en ordre.</p>
+          <p class="eyebrow">MISSION TICE · SÉANCE 02</p>
+          <h1>Prêt à dompter le <span>clavier&nbsp;?</span></h1>
+          <p class="lede">Pixel a verrouillé le terminal du labo. Repère les touches, saisis les codes sans erreur et deviens plus rapide que le chrono.</p>
           <div class="start-row">
             <button class="primary-button" id="startButton" type="button">Commencer la mission <span aria-hidden="true">→</span></button>
-            <p><strong>55 min</strong><br><span>Seul ou en binôme</span></p>
+            <p><strong>55 min</strong><br><span>Seul, sur un ordinateur</span></p>
           </div>
         </div>
 
         <div class="mission-dossier" aria-label="Dossier de mission">
-          <div class="dossier-tab">CONFIDENTIEL</div>
+          <div class="dossier-tab">PRIORITÉ CLAVIER</div>
           <div class="dossier-paper">
-            <div class="pixel-avatar" aria-hidden="true"><span>⌁</span></div>
+            <div class="pixel-avatar" aria-hidden="true">⌨</div>
             <p class="dossier-kicker">MESSAGE DE PIXEL</p>
-            <h2>Agent, prêt à enquêter&nbsp;?</h2>
-            <p>Observe bien, essaie sans crainte et demande un indice si tu bloques. Ici, tu as le droit de te tromper.</p>
-            <div class="stamp">4 DÉFIS</div>
+            <h2>Précision avant vitesse&nbsp;!</h2>
+            <p>Observe chaque signe. Une erreur n’est pas grave : lis le message, corrige, puis réessaie.</p>
+            <div class="stamp">5 DÉFIS + BONUS</div>
           </div>
         </div>
       </div>
@@ -61,204 +61,250 @@
       <div class="briefing-card">
         <div>
           <p class="eyebrow">TON PLAN DE MISSION</p>
-          <h2>Une heure pour prendre les commandes</h2>
+          <h2>55 minutes pour prendre de bons réflexes</h2>
         </div>
         <ol class="timeline" aria-label="Déroulé de la séance">
           <li><span class="time">05</span><strong>Briefing</strong><small>Comprendre la mission</small></li>
-          <li><span class="time amber">10</span><strong>Repérage</strong><small>Explorer le bureau</small></li>
-          <li><span class="time teal">15</span><strong>Fenêtres</strong><small>Prendre les commandes</small></li>
-          <li><span class="time purple">15</span><strong>Gestes</strong><small>Maîtriser la souris</small></li>
-          <li><span class="time coral">10</span><strong>Bonus + bilan</strong><small>Essayer le clavier</small></li>
+          <li><span class="time amber">08</span><strong>Repérage</strong><small>Trouver les touches</small></li>
+          <li><span class="time teal">12</span><strong>Saisie</strong><small>Recopier exactement</small></li>
+          <li><span class="time purple">10</span><strong>Correction</strong><small>Réparer les erreurs</small></li>
+          <li><span class="time coral">12</span><strong>Commandes</strong><small>Signes et raccourcis</small></li>
+          <li><span class="time blue">08</span><strong>Chrono + bilan</strong><small>Réinvestir</small></li>
         </ol>
+        <p class="scoring-preview"><strong>🎯 Barème :</strong> une erreur retire 20 à 50 points. Les coups de pouce sont gratuits et les malus sont plafonnés pour garder le droit de progresser.</p>
       </div>
     </section>
 
     <section class="screen challenge-screen" id="challenge1" data-screen="challenge1" aria-labelledby="challenge1Title">
       <div class="challenge-heading">
-        <div><p class="eyebrow">DÉFI 01 · REPÉRAGE</p><h1 id="challenge1Title">Le bureau sous la loupe</h1></div>
-        <button class="hint-button" type="button" data-help="zones">💡 Coup de pouce</button>
+        <div><p class="eyebrow">DÉFI 01 · REPÉRAGE</p><h1 id="challenge1Title">Le clavier sous la loupe</h1></div>
+        <button class="hint-button" type="button" data-help="keys">💡 Coup de pouce</button>
       </div>
       <div class="instruction-card">
-        <span class="instruction-number" id="zoneStep">1</span>
-        <div><p class="instruction-label" id="zonePhaseLabel">MANCHE 1 · OBSERVE ET CLIQUE</p><p id="zonePrompt">Clique sur le <strong>Bureau</strong> : la grande zone de travail derrière les fenêtres.</p></div>
+        <span class="instruction-number" id="keyStep">1</span>
+        <div><p class="instruction-label">OBSERVE ET CLIQUE</p><p id="keyPrompt">Clique sur la touche <strong>Entrée</strong>.</p></div>
       </div>
 
-      <div class="desktop-shell" id="zoneDesktop" aria-label="Faux bureau d’ordinateur">
-        <button class="desktop-surface hotspot" type="button" data-zone="desktop" aria-label="Le bureau"></button>
-        <button class="desktop-icon hotspot" type="button" data-zone="icon" aria-label="Une icône">
-          <span class="folder-icon" aria-hidden="true"></span><span>Mes missions</span>
-        </button>
-        <div class="demo-window hotspot" data-zone="window" role="button" tabindex="0" aria-label="Une fenêtre">
-          <div class="demo-titlebar"><span>Bloc-notes de Pixel</span><span aria-hidden="true">— □ ×</span></div>
-          <div class="demo-content"><span></span><span></span><span class="short"></span></div>
-        </div>
-        <div class="taskbar hotspot" data-zone="taskbar" role="button" tabindex="0" aria-label="La barre des tâches">
-          <button class="start-menu hotspot" type="button" data-zone="start" aria-label="Le bouton Démarrer"><span aria-hidden="true">⊞</span></button>
-          <span class="task-icon active" aria-hidden="true">▣</span><span class="task-icon" aria-hidden="true">●</span>
-          <button class="notification-area hotspot" type="button" data-zone="notifications" aria-label="La zone de notification">⌃　▰　10:25</button>
+      <div class="keyboard-wrap">
+        <div class="keyboard" id="keyFinder" aria-label="Clavier AZERTY interactif">
+          <div class="key-row row-numbers">
+            <button class="key" type="button" data-key="escape">Échap</button>
+            <button class="key" type="button" data-key="1">1<br><small>&amp;</small></button>
+            <button class="key" type="button" data-key="2">2<br><small>é</small></button>
+            <button class="key" type="button" data-key="3">3<br><small>"</small></button>
+            <button class="key" type="button" data-key="4">4<br><small>'</small></button>
+            <button class="key" type="button" data-key="5">5<br><small>(</small></button>
+            <button class="key" type="button" data-key="6">6<br><small>-</small></button>
+            <button class="key" type="button" data-key="7">7<br><small>è</small></button>
+            <button class="key" type="button" data-key="8">8<br><small>_</small></button>
+            <button class="key" type="button" data-key="9">9<br><small>ç</small></button>
+            <button class="key" type="button" data-key="0">0<br><small>à · @</small></button>
+            <button class="key key-wide" type="button" data-key="backspace">Retour arrière <span aria-hidden="true">⌫</span></button>
+          </div>
+          <div class="key-row">
+            <button class="key key-tab" type="button" data-key="tab">Tab</button>
+            <button class="key" type="button" data-key="a">A</button><button class="key" type="button" data-key="z">Z</button><button class="key" type="button" data-key="e">E<br><small>€</small></button><button class="key" type="button" data-key="r">R</button><button class="key" type="button" data-key="t">T</button><button class="key" type="button" data-key="y">Y</button><button class="key" type="button" data-key="u">U</button><button class="key" type="button" data-key="i">I</button><button class="key" type="button" data-key="o">O</button><button class="key" type="button" data-key="p">P</button>
+            <button class="key key-wide" type="button" data-key="enter">Entrée <span aria-hidden="true">↵</span></button>
+          </div>
+          <div class="key-row">
+            <button class="key key-caps" type="button" data-key="capslock">Verr. Maj <span class="key-light" aria-hidden="true"></span></button>
+            <button class="key" type="button" data-key="q">Q</button><button class="key" type="button" data-key="s">S</button><button class="key" type="button" data-key="d">D</button><button class="key" type="button" data-key="f">F</button><button class="key" type="button" data-key="g">G</button><button class="key" type="button" data-key="h">H</button><button class="key" type="button" data-key="j">J</button><button class="key" type="button" data-key="k">K</button><button class="key" type="button" data-key="l">L</button><button class="key" type="button" data-key="m">M</button>
+            <button class="key key-delete" type="button" data-key="delete">Suppr</button>
+          </div>
+          <div class="key-row">
+            <button class="key key-shift" type="button" data-key="shift">Maj <span aria-hidden="true">⇧</span></button>
+            <button class="key" type="button" data-key="w">W</button><button class="key" type="button" data-key="x">X</button><button class="key" type="button" data-key="c">C</button><button class="key" type="button" data-key="v">V</button><button class="key" type="button" data-key="b">B</button><button class="key" type="button" data-key="n">N</button><button class="key" type="button" data-key="comma">,<br><small>?</small></button><button class="key" type="button" data-key="semicolon">;<br><small>.</small></button><button class="key" type="button" data-key="colon">:<br><small>/</small></button>
+            <button class="key key-shift" type="button" data-key="shift">Maj <span aria-hidden="true">⇧</span></button>
+          </div>
+          <div class="key-row row-bottom">
+            <button class="key key-ctrl" type="button" data-key="ctrl">Ctrl</button><button class="key" type="button" data-key="fn">Fn</button><button class="key" type="button" data-key="alt">Alt</button><button class="key key-space" type="button" data-key="space">Espace</button><button class="key key-altgr" type="button" data-key="altgr">Alt Gr</button><button class="key key-ctrl" type="button" data-key="ctrl">Ctrl</button>
+          </div>
         </div>
       </div>
-      <div class="quiz-arena" id="zoneQuiz" hidden>
-        <div class="quiz-top"><span class="round-pill">MANCHE 2</span><span id="zoneQuizCount">Question 1 / 4</span></div>
-        <p class="quiz-context" id="zoneQuizContext"></p>
-        <h2 id="zoneQuizQuestion"></h2>
-        <div class="answer-grid" id="zoneQuizAnswers"></div>
-      </div>
-      <div class="feedback" id="zoneFeedback" aria-live="polite">Observe l’écran, puis clique au bon endroit.</div>
-      <div class="screen-actions"><button class="secondary-button" type="button" data-action="home">Quitter</button><button class="primary-button" id="zoneNext" type="button" disabled>Défi suivant →</button></div>
+      <p class="keyboard-note">Clavier AZERTY simplifié — l’emplacement peut varier légèrement selon l’ordinateur.</p>
+      <div class="feedback" id="keyFeedback" aria-live="polite">Prends le temps d’observer toutes les zones du clavier.</div>
+      <div class="screen-actions"><button class="secondary-button" type="button" data-action="home">Quitter</button><button class="primary-button" id="keyNext" type="button" disabled>Défi suivant →</button></div>
     </section>
 
     <section class="screen challenge-screen" id="challenge2" data-screen="challenge2" aria-labelledby="challenge2Title">
       <div class="challenge-heading">
-        <div><p class="eyebrow">DÉFI 02 · FENÊTRES</p><h1 id="challenge2Title">Aux commandes des fenêtres</h1></div>
-        <button class="hint-button" type="button" data-help="windows">💡 Coup de pouce</button>
+        <div><p class="eyebrow">DÉFI 02 · SAISIE EXACTE</p><h1 id="challenge2Title">Le code sans faute</h1></div>
+        <button class="hint-button" type="button" data-help="typing">💡 Coup de pouce</button>
       </div>
       <div class="instruction-card teal-card">
-        <span class="instruction-number" id="windowStep">1</span>
-        <div><p class="instruction-label" id="windowPhaseLabel">MANCHE 1 · MANIPULE</p><p id="windowPrompt">Fais un <strong>double-clic</strong> sur le dossier « Enquête » pour l’ouvrir.</p></div>
+        <span class="instruction-number" id="typingStep">1</span>
+        <div><p class="instruction-label">TOLÉRANCE ZÉRO</p><p>Recopie exactement le modèle : accents, espaces, majuscules et ponctuation comptent.</p></div>
       </div>
 
-      <div class="desktop-shell interactive-desktop" id="windowDesktop" aria-label="Bureau pour manipuler des fenêtres">
-        <button class="desktop-icon interactive-icon" id="folderLauncher" type="button" aria-label="Dossier Enquête, double-cliquer pour ouvrir">
-          <span class="folder-icon" aria-hidden="true"></span><span>Enquête</span>
-        </button>
-        <div class="app-window folder-window" id="folderWindow" role="dialog" aria-label="Fenêtre Enquête" hidden>
-          <div class="window-titlebar">
-            <span>📁 Enquête</span>
-            <div class="window-controls">
-              <button type="button" data-window-action="minimize" aria-label="Réduire la fenêtre">—</button>
-              <button type="button" data-window-action="maximize" aria-label="Agrandir la fenêtre">□</button>
-              <button type="button" data-window-action="close" aria-label="Fermer la fenêtre">×</button>
-            </div>
-          </div>
-          <div class="window-body files-grid"><span>📄<small>Indice.txt</small></span><span>🖼️<small>Plan.png</small></span><span>📁<small>Archives</small></span></div>
-        </div>
-        <div class="app-window notes-window" id="notesWindow" role="dialog" aria-label="Fenêtre Notes de Pixel" hidden>
-          <div class="window-titlebar"><span>📝 Notes de Pixel</span><div class="window-controls"><button type="button" data-note-close aria-label="Fermer Notes de Pixel">×</button></div></div>
-          <div class="window-body note-paper">Bravo ! Tu sais passer d’une fenêtre à l’autre.</div>
-        </div>
-        <div class="taskbar">
-          <span class="start-menu" aria-hidden="true">⊞</span>
-          <button class="task-app" id="folderTask" type="button">📁 Enquête</button>
-          <button class="task-app" id="notesTask" type="button">📝 Notes</button>
-          <span class="notification-area">▰　10:32</span>
-        </div>
+      <div class="typing-arena">
+        <div class="arena-top"><span class="round-pill teal-pill">CODE <span id="typingRound">1</span> / 3</span><span id="typingStatus">Observe avant d’écrire</span></div>
+        <p class="copy-model" id="typingModel">Élève n°6 : prénom.nom@college.example - 12,50 € / 20 ?</p>
+        <label for="typingInput">Ta saisie</label>
+        <input id="typingInput" class="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Écris ici…">
+        <div class="typing-meta"><span id="typingCounter">0 caractère</span><span id="typingCompare">Chaque signe compte.</span></div>
+        <div class="inline-actions"><button class="secondary-button compact" id="typingClear" type="button">Effacer</button><button class="primary-button" id="typingValidate" type="button">Vérifier ma saisie</button></div>
       </div>
-      <div class="quiz-arena teal-quiz" id="windowQuiz" hidden>
-        <div class="quiz-top"><span class="round-pill">MANCHE 2</span><span id="windowQuizCount">Incident 1 / 4</span></div>
-        <p class="quiz-context" id="windowQuizContext"></p>
-        <h2 id="windowQuizQuestion"></h2>
-        <div class="answer-grid" id="windowQuizAnswers"></div>
-      </div>
-      <div class="feedback" id="windowFeedback" aria-live="polite">Commence par ouvrir le dossier.</div>
-      <div class="screen-actions"><button class="secondary-button" type="button" data-action="previous">← Retour</button><button class="primary-button" id="windowNext" type="button" disabled>Défi suivant →</button></div>
+      <div class="feedback" id="typingFeedback" aria-live="polite">Conseil : avance lentement, puis relis de gauche à droite.</div>
+      <div class="screen-actions"><button class="secondary-button" type="button" data-action="previous">← Retour</button><button class="primary-button" id="typingNext" type="button" disabled>Défi suivant →</button></div>
     </section>
 
     <section class="screen challenge-screen" id="challenge3" data-screen="challenge3" aria-labelledby="challenge3Title">
       <div class="challenge-heading">
-        <div><p class="eyebrow">DÉFI 03 · SOURIS</p><h1 id="challenge3Title">Le dojo des quatre gestes</h1></div>
-        <button class="hint-button" type="button" data-help="mouse">💡 Coup de pouce</button>
+        <div><p class="eyebrow">DÉFI 03 · CORRECTION</p><h1 id="challenge3Title">La clinique des erreurs</h1></div>
+        <button class="hint-button" type="button" data-help="correction">💡 Coup de pouce</button>
       </div>
       <div class="instruction-card purple-card">
-        <span class="instruction-number" id="mouseStep">1</span>
-        <div><p class="instruction-label" id="mousePhaseLabel">MANCHE 1 · ENTRAÎNE-TOI</p><p id="mousePrompt">Fais un <strong>clic simple</strong> sur l’interrupteur.</p></div>
+        <span class="instruction-number" id="correctionStep">1</span>
+        <div><p class="instruction-label" id="correctionLabel">RETOUR ARRIÈRE</p><p id="correctionPrompt">Place le curseur après le caractère en trop, puis utilise <kbd>Retour arrière</kbd>.</p></div>
       </div>
 
-      <div class="gesture-lab">
-        <div class="gesture-stage" data-stage="click">
-          <button class="switch-target" id="clickTarget" type="button" aria-label="Interrupteur"><span></span></button>
-          <p>Clic simple</p>
+      <div class="correction-arena">
+        <div class="error-ticket">
+          <div class="ticket-top"><span>FICHE À RÉPARER</span><span id="correctionRound">1 / 3</span></div>
+          <label for="correctionInput">Texte de Pixel</label>
+          <textarea id="correctionInput" rows="4" spellcheck="false">Le clavier est prêt!!</textarea>
+          <p class="target-line"><span>Texte attendu</span><strong id="correctionTarget">Le clavier est prêt !</strong></p>
         </div>
-        <div class="gesture-stage" data-stage="double" hidden>
-          <button class="vault-target" id="doubleTarget" type="button" aria-label="Coffre à ouvrir par double-clic"><span aria-hidden="true">◆</span></button>
-          <p>Double-clic</p>
+        <div class="key-choice" aria-label="Touches utiles">
+          <span class="big-key">⌫<small>Retour arrière</small></span>
+          <span class="versus">ou</span>
+          <span class="big-key">Suppr<small>Efface à droite</small></span>
         </div>
-        <div class="gesture-stage" data-stage="right" hidden>
-          <button class="file-target" id="rightTarget" type="button" aria-label="Fichier, faire un clic droit"><span aria-hidden="true">📄</span><small>indice.txt</small></button>
-          <div class="context-menu" id="contextMenu" hidden><span>Ouvrir</span><span>Renommer</span><span>Propriétés</span></div>
-          <p>Clic droit</p>
+        <button class="primary-button" id="correctionValidate" type="button">Vérifier la réparation</button>
+      </div>
+      <div class="feedback" id="correctionFeedback" aria-live="polite">Une touche efface à gauche du curseur, l’autre à droite.</div>
+      <div class="screen-actions"><button class="secondary-button" type="button" data-action="previous">← Retour</button><button class="primary-button" id="correctionNext" type="button" disabled>Défi suivant →</button></div>
+    </section>
+
+    <section class="screen challenge-screen" id="challenge4" data-screen="challenge4" aria-labelledby="challenge4Title">
+      <div class="challenge-heading">
+        <div><p class="eyebrow">DÉFI 04 · CARACTÈRES SPÉCIAUX</p><h1 id="challenge4Title">L’atelier des symboles</h1></div>
+        <button class="hint-button" type="button" data-help="symbols">💡 Coup de pouce</button>
+      </div>
+      <div class="instruction-card coral-card">
+        <span class="instruction-number" id="symbolStep">1</span>
+        <div><p class="instruction-label">LIS LA TOUCHE, PUIS FAIS LA COMBINAISON</p><p id="symbolActionPrompt">Pour écrire <strong class="symbol-goal" id="symbolGoal">@</strong>, sélectionne d’abord la touche à maintenir, puis la touche où le symbole est dessiné.</p></div>
+      </div>
+
+      <div class="symbol-guide" aria-label="Méthode en trois étapes">
+        <div><span>1</span><strong>Repère le symbole</strong><small>Regarde sa position sur la touche.</small></div>
+        <div><span>2</span><strong>Choisis la commande</strong><small>En haut = Maj · en bas à droite = Alt Gr.</small></div>
+        <div><span>3</span><strong>Clique sur la touche</strong><small>La combinaison s’affiche avant validation.</small></div>
+      </div>
+
+      <div class="symbol-lab">
+        <div class="symbol-board">
+          <p>CARACTÈRE À PRODUIRE</p>
+          <strong id="symbolDisplay">@</strong>
+          <span id="symbolHintText">Le symbole est en bas à droite d’une touche.</span>
         </div>
-        <div class="gesture-stage drag-stage" data-stage="drag" hidden>
-          <button class="drag-file" id="dragFile" type="button" draggable="true"><span aria-hidden="true">📄</span> rapport.txt</button>
-          <div class="drop-folder" id="dropFolder" tabindex="0" role="button" aria-label="Dossier À ranger"><span aria-hidden="true">📁</span><span>À ranger</span></div>
-          <p>Glisser-déposer le fichier dans le dossier<br><small>Astuce : clique d’abord sur le fichier puis sur le dossier si le glissement est difficile.</small></p>
+        <div class="combo-builder">
+          <p class="builder-label">A. Quelle touche faut-il maintenir&nbsp;?</p>
+          <div class="combo-row" id="modifierChoices">
+            <button class="modifier-key" type="button" data-modifier="shift"><span aria-hidden="true">⇧</span><strong>Maj</strong><small>Symbole en haut</small></button>
+            <button class="modifier-key" type="button" data-modifier="altgr"><strong>Alt Gr</strong><small>Symbole en bas à droite</small></button>
+          </div>
+          <p class="direct-symbol-note" id="directSymbolNote">Si le symbole est écrit comme caractère principal, ne maintiens rien : clique directement sur sa touche.</p>
+          <p class="builder-label">B. Sur quelle touche vois-tu le symbole&nbsp;?</p>
+          <div class="combo-row key-options" id="symbolKeys">
+            <button class="azerty-keycap" type="button" data-base="0" aria-label="Touche à, zéro, arobase"><span class="keycap-top">0</span><span class="keycap-main">à</span><span class="keycap-alt">@</span></button>
+            <button class="azerty-keycap letter-keycap" type="button" data-base="e" aria-label="Touche E, euro"><span class="keycap-main">E</span><span class="keycap-alt">€</span></button>
+            <button class="azerty-keycap" type="button" data-base="," aria-label="Touche virgule, point d’interrogation"><span class="keycap-top">?</span><span class="keycap-main">,</span></button>
+            <button class="azerty-keycap" type="button" data-base=":" aria-label="Touche deux-points, barre oblique"><span class="keycap-top">/</span><span class="keycap-main">:</span></button>
+          </div>
+          <div class="combo-result" id="comboResult" aria-live="polite"><span>Combinaison choisie</span><strong>Commence par la partie A</strong></div>
         </div>
       </div>
-      <div class="quiz-arena purple-quiz" id="mouseQuiz" hidden>
-        <div class="quiz-top"><span class="round-pill">MANCHE 2</span><span id="mouseQuizCount">Situation 1 / 6</span></div>
-        <p class="quiz-context" id="mouseQuizContext"></p>
-        <h2 id="mouseQuizQuestion"></h2>
-        <div class="answer-grid four-answers" id="mouseQuizAnswers"></div>
+      <div class="feedback" id="symbolFeedback" aria-live="polite">Le symbole @ est en bas à droite : commence par sélectionner Alt Gr.</div>
+      <div class="screen-actions"><button class="secondary-button" type="button" data-action="previous">← Retour</button><button class="primary-button" id="symbolNext" type="button" disabled>Défi suivant →</button></div>
+    </section>
+
+    <section class="screen challenge-screen" id="challenge5" data-screen="challenge5" aria-labelledby="challenge5Title">
+      <div class="challenge-heading">
+        <div><p class="eyebrow">DÉFI 05 · RACCOURCIS</p><h1 id="challenge5Title">Le poste de commande</h1></div>
+        <button class="hint-button" type="button" data-help="shortcuts">💡 Coup de pouce</button>
       </div>
-      <div class="feedback" id="mouseFeedback" aria-live="polite">Un seul appui, puis relâche.</div>
-      <div class="screen-actions"><button class="secondary-button" type="button" data-action="previous">← Retour</button><button class="primary-button" id="mouseNext" type="button" disabled>Défi bonus →</button></div>
+      <div class="instruction-card blue-card">
+        <span class="instruction-number" id="shortcutStep">1</span>
+        <div><p class="instruction-label">CHOISIS LE BON RACCOURCI</p><p id="shortcutPrompt">Pixel veut copier la phrase sélectionnée. Quelle commande utilise-t-il&nbsp;?</p></div>
+      </div>
+
+      <div class="shortcut-game">
+        <div class="mini-editor">
+          <div class="editor-title"><span>▣ Note de mission.txt</span><span>— □ ×</span></div>
+          <div class="editor-toolbar">Fichier　Édition　Affichage</div>
+          <div class="editor-page">
+            <p id="editorLine"><mark>CODE LUMIÈRE</mark></p>
+            <span class="save-state" id="saveState">● Modifications non enregistrées</span>
+          </div>
+        </div>
+        <div class="shortcut-pad" id="shortcutPad">
+          <button type="button" data-shortcut="copy"><kbd>Ctrl</kbd><b>+</b><kbd>C</kbd><span>Copier</span></button>
+          <button type="button" data-shortcut="paste"><kbd>Ctrl</kbd><b>+</b><kbd>V</kbd><span>Coller</span></button>
+          <button type="button" data-shortcut="undo"><kbd>Ctrl</kbd><b>+</b><kbd>Z</kbd><span>Annuler</span></button>
+          <button type="button" data-shortcut="save"><kbd>Ctrl</kbd><b>+</b><kbd>S</kbd><span>Enregistrer</span></button>
+        </div>
+      </div>
+      <p class="keyboard-note">Tu peux cliquer sur les raccourcis ou les faire réellement au clavier.</p>
+      <div class="feedback" id="shortcutFeedback" aria-live="polite">Le menu Édition peut t’aider à retrouver le nom des commandes.</div>
+      <div class="screen-actions"><button class="secondary-button" type="button" data-action="previous">← Retour</button><button class="primary-button" id="shortcutNext" type="button" disabled>Défi bonus →</button></div>
     </section>
 
     <section class="screen challenge-screen" id="bonus" data-screen="bonus" aria-labelledby="bonusTitle">
       <div class="challenge-heading">
-        <div><p class="eyebrow">DÉFI BONUS · CLAVIER</p><h1 id="bonusTitle">Le message secret</h1></div>
-        <button class="hint-button" type="button" data-help="keyboard">💡 Coup de pouce</button>
+        <div><p class="eyebrow">DÉFI BONUS · CHRONO</p><h1 id="bonusTitle">La course de précision</h1></div>
+        <button class="hint-button" type="button" data-help="chrono">💡 Coup de pouce</button>
       </div>
-      <div class="instruction-card coral-card">
-        <span class="instruction-number" id="keyboardStep">1</span>
-        <div><p class="instruction-label" id="keyboardPhaseLabel">MANCHE 1 · RACCOURCIS</p><p id="keyboardPrompt">Clique dans le message, puis appuie sur <kbd>Ctrl</kbd> + <kbd>A</kbd> pour tout sélectionner.</p></div>
+      <div class="instruction-card chrono-card">
+        <span class="instruction-number">★</span>
+        <div><p class="instruction-label">BONUS FACULTATIF · 60 SECONDES</p><p>Recopie 3 codes exactement. Le chrono démarre uniquement quand tu es prêt.</p></div>
       </div>
 
-      <div class="keyboard-lab">
-        <div class="message-panel">
-          <label for="sourceText">Message de Pixel</label>
-          <textarea id="sourceText" rows="3">CODE PIXEL : MISSION RÉUSSIE !</textarea>
-        </div>
-        <div class="key-bridge" aria-hidden="true"><span>Ctrl</span><b>+</b><span>A</span><i>puis</i><span>Ctrl</span><b>+</b><span>C</span><i>puis</i><span>Ctrl</span><b>+</b><span>V</span></div>
-        <div class="message-panel receiver">
-          <label for="targetText">Boîte de transmission</label>
-          <textarea id="targetText" rows="3" placeholder="Le message apparaîtra ici…"></textarea>
+      <div class="chrono-arena">
+        <div class="timer-dial" id="timerDial"><span id="timerValue">60</span><small>secondes</small></div>
+        <div class="chrono-work">
+          <div class="arena-top"><span class="round-pill coral-round">CODE <span id="bonusRound">1</span> / 3</span><span id="bonusScore">0 code validé</span></div>
+          <p class="copy-model small-model" id="bonusModel">Robot n°4 : prêt ?</p>
+          <label for="bonusInput">Ta saisie</label>
+          <input id="bonusInput" class="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" disabled placeholder="Le chrono n’a pas commencé…">
+          <div class="inline-actions">
+            <button class="secondary-button compact" id="skipBonus" type="button">Passer le bonus</button>
+            <button class="primary-button" id="startTimer" type="button">Je suis prêt !</button>
+            <button class="primary-button" id="bonusValidate" type="button" hidden>Valider ce code</button>
+          </div>
         </div>
       </div>
-      <div class="typing-arena" id="typingArena" hidden>
-        <div class="quiz-top"><span class="round-pill coral-round">MISSION FINALE</span><span id="typingCount">Phrase 1 / 2</span></div>
-        <p class="quiz-context">Recopie exactement la phrase, avec les majuscules, les accents espaces et la ponctuation.</p>
-        <div class="copy-model" id="typingModel">Bonjour Pixel !</div>
-        <label for="typingInput">Ta saisie</label>
-        <input id="typingInput" class="typing-input" type="text" autocomplete="off" spellcheck="false" placeholder="Écris ici…">
-        <div class="typing-meta"><span id="typingCounter">0 caractère</span><span id="typingClue">Observe chaque signe.</span></div>
-        <button class="primary-button" id="typingValidate" type="button">Vérifier ma phrase</button>
-      </div>
-      <p class="privacy-note">Tout reste dans cette page : rien n’est envoyé sur Internet.</p>
-      <div class="feedback" id="keyboardFeedback" aria-live="polite">Le raccourci Ctrl + A signifie « tout sélectionner ».</div>
+      <div class="feedback" id="bonusFeedback" aria-live="polite">Le bonus peut seulement ajouter des points. Il ne peut pas faire baisser ton score.</div>
       <div class="screen-actions"><button class="secondary-button" type="button" data-action="previous">← Retour</button><button class="primary-button" id="finishButton" type="button" disabled>Voir mon bilan →</button></div>
     </section>
 
     <section class="screen final-screen" id="final" data-screen="final" aria-labelledby="finalTitle">
+      <div class="print-heading print-only"><div><strong>CLAVIER CHRONO</strong><span>Bilan de la séance TICE 02</span></div><p>Nom et prénom : ____________________　 Classe : ______　 Date : ____ / ____ / ______</p></div>
       <div class="confetti" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
       <p class="eyebrow">MISSION ACCOMPLIE</p>
-      <h1 id="finalTitle">Le bureau n’a plus de secret pour toi&nbsp;!</h1>
-      <p id="finalMessage">Pixel te confie officiellement les commandes du labo numérique.</p>
+      <h1 id="finalTitle">Le clavier répond au doigt et à l’œil&nbsp;!</h1>
+      <p id="finalMessage">Pixel te confie officiellement le terminal du labo numérique.</p>
       <div class="result-grid">
         <div class="score-card">
-          <p>TON SCORE</p>
-          <strong><span id="finalScore">0</span><small> / 4000</small></strong>
+          <p>RÉSULTAT GLOBAL</p>
+          <strong><span id="finalScore">0</span><small> / 5600</small></strong>
+          <div class="overall-percent"><strong id="finalPercent">0 %</strong><span>de maîtrise sur les 5 défis</span></div>
           <div class="star-row" id="starRow" aria-label="Niveau atteint">☆ ☆ ☆</div>
-          <span class="rank-badge" id="rankBadge">Explorateur du bureau</span>
+          <span class="rank-badge" id="rankBadge">Explorateur du clavier</span>
+          <p class="error-summary" id="errorSummary">0 erreur</p>
         </div>
         <div class="skills-card">
-          <h2>Compétences débloquées</h2>
-          <ul>
-            <li><span>✓</span> Je repère les zones de l’écran</li>
-            <li><span>✓</span> Je manipule une fenêtre</li>
-            <li><span>✓</span> Je choisis le bon geste de souris</li>
-            <li id="keyboardSkill"><span>✓</span> J’utilise Ctrl + A, C et V</li>
-          </ul>
+          <h2>Compétences : où j’en suis</h2>
+          <ul id="skillsList"></ul>
         </div>
       </div>
+      <div class="badge-shelf" id="badgeShelf" aria-label="Badges obtenus"></div>
       <div class="result-details" id="resultDetails"></div>
       <div class="final-actions"><button class="secondary-button" id="restartButton" type="button">↻ Recommencer</button><button class="primary-button" id="printButton" type="button">Imprimer mon bilan</button></div>
     </section>
   </main>
 
-  <footer class="site-signature">
-    Tice - Technologie - Vincent Belhaire
-  </footer>
+  <footer class="site-signature">Tice - Technologie - Vincent Belhaire</footer>
 
   <dialog class="help-dialog" id="helpDialog" aria-labelledby="helpTitle">
     <div class="dialog-top"><span class="help-icon">💡</span><button type="button" id="closeHelp" aria-label="Fermer l’aide">×</button></div>
