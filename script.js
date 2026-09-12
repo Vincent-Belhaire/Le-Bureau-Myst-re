@@ -3,809 +3,645 @@
 
   const screens = [...document.querySelectorAll(".screen")];
   const missionBar = document.getElementById("missionBar");
-  const progressTrack = document.querySelector(".progress-track");
   const progressFill = document.getElementById("progressFill");
+  const progressBar = document.querySelector("[role='progressbar']");
   const stepLabel = document.getElementById("stepLabel");
   const scoreValue = document.getElementById("scoreValue");
   const toast = document.getElementById("toast");
-  const awarded = new Set();
-  const categoryMax = { keys: 1000, typing: 1000, correction: 1000, symbols: 1000, shortcuts: 1000, bonus: 600 };
-  const categoryLabels = { keys: "Repérage", typing: "Saisie exacte", correction: "Correction", symbols: "Caractères spéciaux", shortcuts: "Raccourcis", bonus: "Bonus chrono" };
+  const screenOrder = ["welcome", "challenge1", "challenge2", "challenge3", "bonus", "final"];
+  const MAX_SCORE = 4000;
+  const ERROR_PENALTY = 25;
 
   const state = {
-    screen: "welcome",
+    current: "welcome",
     score: 0,
-    grossScores: { keys: 0, typing: 0, correction: 0, symbols: 0, shortcuts: 0, bonus: 0 },
-    penalties: { keys: 0, typing: 0, correction: 0, symbols: 0, shortcuts: 0, bonus: 0 },
-    mistakes: { keys: 0, typing: 0, correction: 0, symbols: 0, shortcuts: 0, bonus: 0 },
-    pendingPenalty: null,
-    keyIndex: 0,
+    errors: 0,
+    penalties: { zones: 0, windows: 0, mouse: 0, keyboard: 0 },
+    mistakes: {},
+    awarded: new Set(),
+    attempts: { zones: 0, windows: 0, mouse: 0, keyboard: 0 },
+    zoneIndex: 0,
+    windowIndex: 0,
+    mouseIndex: 0,
+    keyboardIndex: 0,
+    zoneQuizStarted: false,
+    zoneQuizComplete: false,
+    windowQuizStarted: false,
+    windowQuizComplete: false,
+    mouseQuizStarted: false,
+    mouseQuizComplete: false,
+    typingStarted: false,
     typingIndex: 0,
-    correctionIndex: 0,
-    correctionKeys: {},
-    symbolIndex: 0,
-    selectedModifier: null,
-    shortcutIndex: 0,
-    bonusIndex: 0,
-    bonusSeconds: 60,
-    bonusStarted: false,
-    bonusFinished: false,
-    bonusCodes: 0,
-    timer: null
+    typingReadyNext: false,
+    bonusComplete: false
   };
 
-  const screenOrder = ["challenge1", "challenge2", "challenge3", "challenge4", "challenge5", "bonus"];
-
-  function categoryFromId(id) {
-    if (id.startsWith("key")) return "keys";
-    if (id.startsWith("typing")) return "typing";
-    if (id.startsWith("correction")) return "correction";
-    if (id.startsWith("symbol")) return "symbols";
-    if (id.startsWith("shortcut")) return "shortcuts";
-    if (id.startsWith("bonus")) return "bonus";
-    return null;
-  }
-
-  function categoryScore(category) {
-    return Math.max(0, state.grossScores[category] - state.penalties[category]);
-  }
-
-  function renderRunningScore(animation = "gain") {
-    state.score = Object.keys(categoryMax).reduce((total, category) => total + categoryScore(category), 0);
-    scoreValue.textContent = String(state.score);
-    const color = animation === "loss" ? "#ff5d73" : "#ffffff";
-    scoreValue.animate?.([
-      { transform: "scale(1)", color: "#ffb627" },
-      { transform: "scale(1.35)", color },
-      { transform: "scale(1)", color: "#ffb627" }
-    ], { duration: 360 });
-  }
-
-  function addScore(id, points) {
-    if (awarded.has(id)) return;
-    awarded.add(id);
-    const category = categoryFromId(id);
-    if (category) state.grossScores[category] += points;
-    renderRunningScore("gain");
-  }
-
-  function applyPenalty(category, points) {
-    const cap = category === "bonus" ? 300 : 500;
-    const available = Math.max(0, cap - state.penalties[category]);
-    const applied = Math.min(points, available);
-    state.mistakes[category] += 1;
-    if (applied > 0) {
-      state.penalties[category] += applied;
-      renderRunningScore("loss");
-      showToast(`Erreur notée : –${applied} pts en ${categoryLabels[category]}`);
-    } else {
-      showToast(`Erreur notée · malus maximal atteint pour ce défi`);
-    }
-    state.pendingPenalty = applied;
-    return applied;
-  }
-
-  function setFeedback(element, message, kind = "info") {
-    element.classList.remove("success", "error", "with-penalty");
-    if (kind !== "info") element.classList.add(kind);
-    if (kind === "error" && state.pendingPenalty !== null) {
-      const penaltyText = state.pendingPenalty > 0 ? `–${state.pendingPenalty} pts` : "malus maximal";
-      element.classList.add("with-penalty");
-      element.innerHTML = `<span>${message}</span><strong class="feedback-penalty">${penaltyText}</strong>`;
-      state.pendingPenalty = null;
-    } else {
-      element.innerHTML = message;
-    }
-  }
-
-  function showToast(message) {
-    toast.textContent = message;
-    toast.classList.add("show");
-    window.clearTimeout(showToast.timeout);
-    showToast.timeout = window.setTimeout(() => toast.classList.remove("show"), 2100);
-  }
-
-  function protectManualEntry(input, category, feedback, message) {
-    let lastBlockedAt = 0;
-    const blockInsertion = event => {
-      event.preventDefault();
-      const now = Date.now();
-      if (now - lastBlockedAt < 450) return;
-      lastBlockedAt = now;
-      applyPenalty(category, 25);
-      input.classList.add("input-bad");
-      window.setTimeout(() => input.classList.remove("input-bad"), 650);
-      setFeedback(feedback, message, "error");
-    };
-
-    input.addEventListener("paste", blockInsertion);
-    input.addEventListener("drop", blockInsertion);
-    input.addEventListener("beforeinput", event => {
-      if (event.inputType === "insertFromPaste" || event.inputType === "insertFromDrop") blockInsertion(event);
-    });
-  }
+  const challengeProgress = { welcome: 0, challenge1: 8, challenge2: 33, challenge3: 58, bonus: 82, final: 100 };
+  const helpCopy = {
+    general: `<p>Dans chaque défi, lis d’abord la consigne placée au-dessus de l’écran.</p><ul><li>Essaie une action à la fois.</li><li>Une erreur retire ${ERROR_PENALTY} points, mais tu peux toujours corriger et continuer.</li><li>Le message sous l’activité te dit tout de suite si tu avances.</li><li>Le bouton « Coup de pouce » donne un indice sans retirer de point.</li></ul>`,
+    zones: `<ul><li><strong>Bureau :</strong> la grande surface de fond.</li><li><strong>Icône :</strong> un petit dessin qui représente un fichier, un dossier ou une application.</li><li><strong>Fenêtre :</strong> un cadre qui affiche un logiciel ou un dossier.</li><li><strong>Barre des tâches :</strong> la bande tout en bas de l’écran.</li><li><strong>Démarrer :</strong> le bouton ⊞, à gauche de la barre.</li><li><strong>Notifications :</strong> l’heure et les petits symboles, à droite.</li></ul>`,
+    windows: `<ul><li><strong>Double-clic :</strong> deux clics rapides pour ouvrir.</li><li><strong>—</strong> réduit la fenêtre sans la fermer.</li><li><strong>□</strong> agrandit la fenêtre.</li><li><strong>×</strong> ferme la fenêtre.</li><li>Un bouton de la barre des tâches permet de retrouver une fenêtre réduite ou de changer d’application.</li></ul>`,
+    mouse: `<ul><li><strong>Clic :</strong> sélectionner ou actionner un bouton.</li><li><strong>Double-clic :</strong> ouvrir un fichier ou un dossier.</li><li><strong>Clic droit :</strong> afficher les actions possibles.</li><li><strong>Glisser-déposer :</strong> maintenir le clic, déplacer, puis relâcher.</li></ul>`,
+    keyboard: `<p>Garde la touche <kbd>Ctrl</kbd> enfoncée et appuie une fois sur la lettre.</p><ul><li><kbd>Ctrl</kbd> + <kbd>A</kbd> : tout sélectionner.</li><li><kbd>Ctrl</kbd> + <kbd>C</kbd> : copier la sélection.</li><li><kbd>Ctrl</kbd> + <kbd>V</kbd> : coller ce qui a été copié.</li></ul>`
+  };
 
   function showScreen(id) {
-    if (state.screen === "bonus" && id !== "bonus" && state.timer) {
-      window.clearInterval(state.timer);
-      state.timer = null;
-    }
-    state.screen = id;
     screens.forEach(screen => screen.classList.toggle("is-active", screen.id === id));
-    const index = screenOrder.indexOf(id);
-    const inMission = index >= 0;
-    missionBar.hidden = !inMission;
-    if (inMission) {
-      const percent = Math.round((index / screenOrder.length) * 100);
-      progressFill.style.width = `${percent}%`;
-      progressTrack.setAttribute("aria-valuenow", String(percent));
-      stepLabel.textContent = index === 5 ? "Bonus + bilan" : `Défi ${index + 1} sur 5`;
-    }
-    if (id === "final") {
-      missionBar.hidden = false;
-      progressFill.style.width = "100%";
-      progressTrack.setAttribute("aria-valuenow", "100");
-      stepLabel.textContent = "Mission terminée";
-    }
+    state.current = id;
+    missionBar.hidden = id === "welcome" || id === "final";
+    const step = Math.max(1, screenOrder.indexOf(id));
+    stepLabel.textContent = id === "bonus" ? "Défi bonus" : `Défi ${step} sur 4`;
+    const percent = challengeProgress[id];
+    progressFill.style.width = `${percent}%`;
+    progressBar.setAttribute("aria-valuenow", String(percent));
     window.scrollTo({ top: 0, behavior: "smooth" });
-    document.getElementById(id)?.querySelector("h1")?.focus?.({ preventScroll: true });
+    const heading = document.querySelector(`#${id} h1`);
+    if (heading && id !== "welcome") heading.focus({ preventScroll: true });
+  }
+
+  function addPoints(key, points) {
+    if (state.awarded.has(key)) return;
+    state.awarded.add(key);
+    state.score += points;
+    scoreValue.textContent = getScore();
+    toast.textContent = `+ ${points} points · Bien joué !`;
+    toast.classList.remove("penalty");
+    toast.classList.add("show");
+    clearTimeout(addPoints.timer);
+    addPoints.timer = setTimeout(() => toast.classList.remove("show"), 1700);
+  }
+
+  function getScore() {
+    const penalties = Object.values(state.penalties).reduce((sum, value) => sum + value, 0);
+    return Math.max(0, state.score - penalties);
+  }
+
+  function recordMistake(skill, key) {
+    state.errors++;
+    state.penalties[skill] += ERROR_PENALTY;
+    state.mistakes[key] = (state.mistakes[key] || 0) + 1;
+    scoreValue.textContent = getScore();
+    toast.textContent = `− ${ERROR_PENALTY} points · Observe et réessaie`;
+    toast.classList.add("show", "penalty");
+    clearTimeout(addPoints.timer);
+    addPoints.timer = setTimeout(() => toast.classList.remove("show", "penalty"), 1700);
+  }
+
+  function setFeedback(element, message, type = "") {
+    element.textContent = message;
+    element.className = `feedback ${type}`.trim();
+  }
+
+  function createQuiz({ arena, count, context, question, answers, feedback, items, keyPrefix, skill, noun, onComplete }) {
+    let index = 0;
+
+    function render() {
+      const item = items[index];
+      count.textContent = `${noun} ${index + 1} / ${items.length}`;
+      context.textContent = item.context;
+      question.textContent = item.question;
+      answers.innerHTML = "";
+      arena.querySelector(".quiz-next")?.remove();
+      item.answers.forEach((answer, answerIndex) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "answer-button";
+        button.textContent = answer;
+        button.addEventListener("click", () => {
+          if (answerIndex !== item.correct) {
+            button.classList.add("wrong");
+            recordMistake(skill, `${keyPrefix}-${index}`);
+            setFeedback(feedback, `Pas encore. ${item.hint}`, "error");
+            return;
+          }
+          [...answers.children].forEach(choice => choice.disabled = true);
+          button.classList.add("correct");
+          addPoints(`${keyPrefix}-${index}`, 100);
+          setFeedback(feedback, item.explanation, "success");
+          const next = document.createElement("button");
+          next.type = "button";
+          next.className = "primary-button quiz-next";
+          next.textContent = index === items.length - 1 ? "Terminer la manche →" : `${noun} suivante →`;
+          next.addEventListener("click", () => {
+            index++;
+            if (index >= items.length) onComplete();
+            else render();
+          });
+          arena.appendChild(next);
+        });
+        answers.appendChild(button);
+      });
+    }
+    return render;
   }
 
   document.getElementById("startButton").addEventListener("click", () => showScreen("challenge1"));
   document.getElementById("homeButton").addEventListener("click", () => showScreen("welcome"));
   document.querySelectorAll("[data-action='home']").forEach(button => button.addEventListener("click", () => showScreen("welcome")));
-  document.querySelectorAll("[data-action='previous']").forEach(button => {
-    button.addEventListener("click", () => {
-      const index = screenOrder.indexOf(state.screen);
-      if (state.screen === "bonus" && !state.bonusFinished) resetBonus();
-      showScreen(screenOrder[Math.max(0, index - 1)]);
-    });
-  });
+  document.querySelectorAll("[data-action='previous']").forEach(button => button.addEventListener("click", () => {
+    const currentIndex = screenOrder.indexOf(state.current);
+    showScreen(screenOrder[Math.max(1, currentIndex - 1)]);
+  }));
 
-  // Défi 1 — repérage des touches
-  const keyTasks = [
-    { key: "enter", name: "Entrée", tip: "Elle valide une action ou va à la ligne." },
-    { key: "shift", name: "Maj", tip: "Garde-la enfoncée pour une seule majuscule." },
-    { key: "backspace", name: "Retour arrière", tip: "Elle efface le caractère situé à gauche du curseur." },
-    { key: "delete", name: "Suppr", tip: "Elle efface le caractère situé à droite du curseur." },
-    { key: "ctrl", name: "Ctrl", tip: "Elle se combine avec une lettre pour former un raccourci." },
-    { key: "altgr", name: "Alt Gr", tip: "Elle produit le troisième signe d’une touche, comme @ ou €." },
-    { key: "capslock", name: "Verr. Maj", tip: "Elle garde les majuscules activées jusqu’au prochain appui." },
-    { key: "shift", name: "Maj", prompt: "Pixel veut écrire <strong>une seule majuscule</strong>. Clique sur la touche qu’il doit garder enfoncée.", tip: "Exact : Maj agit seulement pendant que tu la gardes enfoncée." },
-    { key: "capslock", name: "Verr. Maj", prompt: "Pixel veut écrire <strong>plusieurs mots en majuscules</strong>. Clique sur la touche qui reste active.", tip: "Exact : Verr. Maj reste active jusqu’à ce que tu appuies de nouveau dessus." }
+  const helpDialog = document.getElementById("helpDialog");
+  const helpContent = document.getElementById("helpContent");
+  const openHelp = key => {
+    helpContent.innerHTML = helpCopy[key] || helpCopy.general;
+    helpDialog.showModal();
+  };
+  document.getElementById("helpButton").addEventListener("click", () => openHelp(state.current === "welcome" ? "general" : ({ challenge1: "zones", challenge2: "windows", challenge3: "mouse", bonus: "keyboard" }[state.current] || "general")));
+  document.querySelectorAll("[data-help]").forEach(button => button.addEventListener("click", () => openHelp(button.dataset.help)));
+  document.getElementById("closeHelp").addEventListener("click", () => helpDialog.close());
+  document.getElementById("gotItButton").addEventListener("click", () => helpDialog.close());
+  helpDialog.addEventListener("click", event => { if (event.target === helpDialog) helpDialog.close(); });
+
+  // Défi 1 — repérer les zones.
+  const zoneTasks = [
+    { zone: "desktop", label: "Bureau", prompt: "Clique sur le <strong>Bureau</strong> : la grande zone de travail derrière les fenêtres." },
+    { zone: "icon", label: "icône", prompt: "Trouve une <strong>icône</strong> : le petit dessin qui représente ici un dossier." },
+    { zone: "window", label: "fenêtre", prompt: "Clique sur la <strong>fenêtre</strong> ouverte au milieu de l’écran." },
+    { zone: "taskbar", label: "barre des tâches", prompt: "Repère la <strong>barre des tâches</strong>, tout en bas de l’écran." },
+    { zone: "start", label: "bouton Démarrer", prompt: "Clique sur le <strong>bouton Démarrer ⊞</strong>, à gauche de la barre des tâches." },
+    { zone: "notifications", label: "zone de notification", prompt: "Dernier repère : trouve la <strong>zone de notification</strong> avec l’heure, à droite." }
   ];
-  const keyPrompt = document.getElementById("keyPrompt");
-  const keyStep = document.getElementById("keyStep");
-  const keyFeedback = document.getElementById("keyFeedback");
-  const keyNext = document.getElementById("keyNext");
+  const zonePrompt = document.getElementById("zonePrompt");
+  const zoneStep = document.getElementById("zoneStep");
+  const zoneFeedback = document.getElementById("zoneFeedback");
+  const zoneNext = document.getElementById("zoneNext");
 
-  function updateKeyTask() {
-    document.querySelectorAll("#keyFinder .key").forEach(key => key.classList.remove("is-target", "is-wrong"));
-    const task = keyTasks[state.keyIndex];
-    if (!task) {
-      keyPrompt.innerHTML = "Toutes les touches importantes sont repérées. <strong>Défi validé !</strong>";
-      keyStep.textContent = "✓";
-      keyNext.disabled = false;
-      addScore("keys-complete", 100);
-      setFeedback(keyFeedback, "Excellent repérage ! Tu as distingué <strong>Maj</strong>, qui agit une fois, et <strong>Verr. Maj</strong>, qui reste actif.", "success");
+  function handleZone(zone) {
+    if (state.zoneIndex >= zoneTasks.length) return;
+    const task = zoneTasks[state.zoneIndex];
+    state.attempts.zones++;
+    if (zone !== task.zone) {
+      recordMistake("zones", `zone-${task.zone}`);
+      setFeedback(zoneFeedback, "Pas tout à fait. Relis la consigne et observe la position indiquée.", "error");
       return;
     }
-    keyStep.textContent = String(state.keyIndex + 1);
-    keyPrompt.innerHTML = task.prompt || `Clique sur la touche <strong>${task.name}</strong>.`;
-    document.querySelectorAll(`#keyFinder [data-key="${task.key}"]`).forEach(key => key.classList.add("is-target"));
-  }
-
-  document.getElementById("keyFinder").addEventListener("click", event => {
-    const button = event.target.closest("[data-key]");
-    if (!button || state.keyIndex >= keyTasks.length) return;
-    const task = keyTasks[state.keyIndex];
-    if (button.dataset.key !== task.key) {
-      applyPenalty("keys", 25);
-      button.classList.add("is-wrong");
-      window.setTimeout(() => button.classList.remove("is-wrong"), 450);
-      setFeedback(keyFeedback, `Ce n’est pas <strong>${task.name}</strong>. Observe le nom écrit sur les grandes touches.`, "error");
-      return;
-    }
-    document.querySelectorAll(`#keyFinder [data-key="${task.key}"]`).forEach(key => {
-      key.classList.remove("is-target");
-      key.classList.add("is-found");
-    });
-    addScore(`key-${state.keyIndex}`, 100);
-    setFeedback(keyFeedback, `<strong>Oui !</strong> ${task.tip}`, "success");
-    state.keyIndex += 1;
-    window.setTimeout(updateKeyTask, 520);
-  });
-  keyNext.addEventListener("click", () => showScreen("challenge2"));
-  updateKeyTask();
-
-  // Défi 2 — saisie exacte
-  const typingTasks = [
-    "Élève n°6 : prénom.nom@college.example - 12,50 € / 20 ?",
-    "A 8 h 30, Zoé ouvre le fichier \"Défi-2.odt\".",
-    "Code final : AZERTY / sécurisé ? Oui !"
-  ];
-  const typingModel = document.getElementById("typingModel");
-  const typingInput = document.getElementById("typingInput");
-  const typingRound = document.getElementById("typingRound");
-  const typingCounter = document.getElementById("typingCounter");
-  const typingCompare = document.getElementById("typingCompare");
-  const typingFeedback = document.getElementById("typingFeedback");
-  const typingValidate = document.getElementById("typingValidate");
-  const typingNext = document.getElementById("typingNext");
-
-  function describeChar(char) {
-    if (char === undefined) return "la fin du texte";
-    if (char === " ") return "un espace";
-    if (char === "-") return "un tiret simple -";
-    return `« ${char} »`;
-  }
-
-  function firstDifference(actual, expected) {
-    const a = Array.from(actual);
-    const e = Array.from(expected);
-    const length = Math.max(a.length, e.length);
-    for (let index = 0; index < length; index += 1) {
-      if (a[index] !== e[index]) return { index, actual: a[index], expected: e[index] };
-    }
-    return null;
-  }
-
-  function updateTypingLive() {
-    const value = typingInput.value;
-    const target = typingTasks[state.typingIndex] || "";
-    typingCounter.textContent = `${Array.from(value).length} caractère${Array.from(value).length > 1 ? "s" : ""} / ${Array.from(target).length}`;
-    let correctStart = 0;
-    const a = Array.from(value);
-    const e = Array.from(target);
-    while (a[correctStart] === e[correctStart] && correctStart < a.length) correctStart += 1;
-    if (!value) typingCompare.textContent = "Chaque signe compte.";
-    else if (value === target) typingCompare.textContent = "Tout correspond !";
-    else typingCompare.textContent = `${correctStart} caractère${correctStart > 1 ? "s" : ""} correct${correctStart > 1 ? "s" : ""} depuis le début`;
-    typingInput.classList.toggle("input-good", value === target);
-    typingInput.classList.remove("input-bad");
-  }
-
-  function loadTypingTask() {
-    typingModel.textContent = typingTasks[state.typingIndex];
-    typingRound.textContent = String(state.typingIndex + 1);
-    typingInput.value = "";
-    typingInput.disabled = false;
-    typingValidate.disabled = false;
-    updateTypingLive();
-    typingInput.focus();
-  }
-
-  typingInput.addEventListener("input", updateTypingLive);
-  protectManualEntry(typingInput, "typing", typingFeedback, "Le collage est bloqué dans ce défi : recopie le modèle avec le clavier.");
-  typingInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      typingValidate.click();
-    }
-  });
-  document.getElementById("typingClear").addEventListener("click", () => {
-    typingInput.value = "";
-    updateTypingLive();
-    typingInput.focus();
-  });
-  typingValidate.addEventListener("click", () => {
-    const target = typingTasks[state.typingIndex];
-    if (typingInput.value === target) {
-      addScore(`typing-${state.typingIndex}`, 300);
-      typingInput.disabled = true;
-      typingValidate.disabled = true;
-      setFeedback(typingFeedback, `<strong>Parfait au caractère près !</strong> Le code ${state.typingIndex + 1} est validé.`, "success");
-      state.typingIndex += 1;
-      if (state.typingIndex >= typingTasks.length) {
-        addScore("typing-complete", 100);
-        typingNext.disabled = false;
-        setFeedback(typingFeedback, "<strong>Défi validé !</strong> Tu as conservé les accents, les espaces, les majuscules et tous les signes.", "success");
-      } else {
-        window.setTimeout(loadTypingTask, 750);
-      }
-      return;
-    }
-    const difference = firstDifference(typingInput.value, target);
-    applyPenalty("typing", 50);
-    typingInput.classList.add("input-bad");
-    const position = difference.index + 1;
-    if (difference.actual === undefined) {
-      setFeedback(typingFeedback, `Il manque ${describeChar(difference.expected)} à partir de la position ${position}. Regarde la fin du modèle.`, "error");
-    } else if (difference.expected === undefined) {
-      setFeedback(typingFeedback, `Il y a un caractère en trop à la position ${position} : ${describeChar(difference.actual)}.`, "error");
+    addPoints(`zone-${task.zone}`, 100);
+    state.zoneIndex++;
+    setFeedback(zoneFeedback, `Exact ! Tu as reconnu ${task.label}.`, "success");
+    if (state.zoneIndex === zoneTasks.length) {
+      zoneStep.textContent = "✓";
+      zonePrompt.innerHTML = "Tous les repères sont identifiés. <strong>La manche 2 t’attend !</strong>";
+      zoneNext.disabled = false;
+      zoneNext.textContent = "Manche 2 →";
     } else {
-      setFeedback(typingFeedback, `Première différence à la position ${position} : tu as écrit ${describeChar(difference.actual)}, mais le modèle attend ${describeChar(difference.expected)}.`, "error");
+      zoneStep.textContent = String(state.zoneIndex + 1);
+      zonePrompt.innerHTML = zoneTasks[state.zoneIndex].prompt;
     }
-  });
-  typingNext.addEventListener("click", () => showScreen("challenge3"));
+  }
 
-  // Défi 3 — correction
-  const correctionTasks = [
-    {
-      initial: "Le clavier est prêt !x",
-      target: "Le clavier est prêt !",
-      label: "RETOUR ARRIÈRE",
-      prompt: "Place le curseur après le x en trop, puis utilise <kbd>Retour arrière</kbd>.",
-      required: "Backspace",
-      requiredCount: 1
-    },
-    {
-      initial: "Pixel active le mode xxrapide.",
-      target: "Pixel active le mode rapide.",
-      label: "SUPPR",
-      prompt: "Place le curseur avant les deux x, puis appuie deux fois sur <kbd>Suppr</kbd>.",
-      required: "Delete",
-      requiredCount: 2
-    },
-    {
-      initial: "Appuie sur Controôle puis sur S.",
-      target: "Appuie sur Contrôle puis sur S.",
-      label: "CHOISIS TA MÉTHODE",
-      prompt: "Corrige la lettre en trop avec Retour arrière ou Suppr, selon la place de ton curseur.",
-      required: null,
-      requiredCount: 0
-    }
+  document.querySelectorAll("#zoneDesktop [data-zone]").forEach(target => {
+    target.addEventListener("click", event => { event.stopPropagation(); handleZone(target.dataset.zone); });
+    target.addEventListener("keydown", event => { if ((event.key === "Enter" || event.key === " ") && target.tagName !== "BUTTON") { event.preventDefault(); handleZone(target.dataset.zone); } });
+  });
+  const zoneQuizItems = [
+    { context: "Pixel veut lancer son dossier de mission.", question: "Sur quel élément doit-il agir ?", answers: ["Une icône", "Le fond du bureau", "L’heure", "La barre de titre"], correct: 0, hint: "Cherche le petit dessin qui représente un dossier.", explanation: "Exact : une icône représente un fichier, un dossier ou une application." },
+    { context: "Une application est ouverte mais prend trop de place.", question: "Où apparaîtra-t-elle si on la réduit ?", answers: ["Dans la corbeille", "Dans la barre des tâches", "Dans le bouton Démarrer", "Elle disparaît pour toujours"], correct: 1, hint: "Réduire ne veut pas dire fermer.", explanation: "Oui : une fenêtre réduite reste accessible dans la barre des tâches." },
+    { context: "Le professeur demande de vérifier le volume et l’heure.", question: "Quelle zone faut-il observer ?", answers: ["Les icônes", "Le bureau", "La zone de notification", "La fenêtre active"], correct: 2, hint: "Cette zone est placée à droite de la barre des tâches.", explanation: "Bien vu : l’heure, le son et le réseau se trouvent dans la zone de notification." },
+    { context: "Plusieurs applications sont ouvertes.", question: "Comment reconnaître celle que l’on utilise maintenant ?", answers: ["Elle est toujours à gauche", "Sa fenêtre est au premier plan", "Elle est la plus ancienne", "Son icône disparaît"], correct: 1, hint: "Observe ce qui recouvre les autres fenêtres.", explanation: "Exact : la fenêtre active se trouve au premier plan." }
   ];
-  const correctionInput = document.getElementById("correctionInput");
-  const correctionTarget = document.getElementById("correctionTarget");
-  const correctionRound = document.getElementById("correctionRound");
-  const correctionLabel = document.getElementById("correctionLabel");
-  const correctionPrompt = document.getElementById("correctionPrompt");
-  const correctionStep = document.getElementById("correctionStep");
-  const correctionFeedback = document.getElementById("correctionFeedback");
-  const correctionValidate = document.getElementById("correctionValidate");
-  const correctionNext = document.getElementById("correctionNext");
-
-  protectManualEntry(correctionInput, "correction", correctionFeedback, "Le collage est bloqué ici : utilise Retour arrière ou Suppr pour réparer le texte.");
-
-  function loadCorrectionTask() {
-    const task = correctionTasks[state.correctionIndex];
-    correctionInput.value = task.initial;
-    correctionInput.disabled = false;
-    correctionTarget.textContent = task.target;
-    correctionRound.textContent = `${state.correctionIndex + 1} / ${correctionTasks.length}`;
-    correctionLabel.textContent = task.label;
-    correctionPrompt.innerHTML = task.prompt;
-    correctionStep.textContent = String(state.correctionIndex + 1);
-    correctionValidate.disabled = false;
-    state.correctionKeys[state.correctionIndex] = { Backspace: 0, Delete: 0 };
-  }
-  correctionInput.addEventListener("keydown", event => {
-    if (event.key === "Backspace" || event.key === "Delete") {
-      state.correctionKeys[state.correctionIndex][event.key] += 1;
+  const startZoneQuiz = createQuiz({
+    arena: document.getElementById("zoneQuiz"), count: document.getElementById("zoneQuizCount"),
+    context: document.getElementById("zoneQuizContext"), question: document.getElementById("zoneQuizQuestion"), answers: document.getElementById("zoneQuizAnswers"),
+    feedback: zoneFeedback, items: zoneQuizItems, keyPrefix: "zone-quiz", skill: "zones", noun: "Question",
+    onComplete: () => {
+      state.zoneQuizComplete = true;
+      zoneStep.textContent = "✓";
+      zonePrompt.innerHTML = "Tu sais reconnaître les zones <strong>et expliquer leur rôle.</strong>";
+      setFeedback(zoneFeedback, "Défi 1 terminé : repérage validé !", "success");
+      zoneNext.hidden = false; zoneNext.disabled = false; zoneNext.textContent = "Défi suivant →";
     }
   });
-  correctionValidate.addEventListener("click", () => {
-    const task = correctionTasks[state.correctionIndex];
-    if (correctionInput.value !== task.target) {
-      const difference = firstDifference(correctionInput.value, task.target);
-      applyPenalty("correction", 50);
-      setFeedback(correctionFeedback, `Ce n’est pas encore exact. Vérifie autour de la position ${difference.index + 1} : attendu ${describeChar(difference.expected)}.`, "error");
-      return;
-    }
-    if (task.required && state.correctionKeys[state.correctionIndex][task.required] < task.requiredCount) {
-      const label = task.required === "Backspace" ? "Retour arrière" : "Suppr";
-      applyPenalty("correction", 25);
-      setFeedback(correctionFeedback, `Le texte est juste, mais cette manche sert à essayer <strong>${label}</strong>. Repars du texte proposé et utilise cette touche.`, "error");
-      loadCorrectionTask();
-      correctionInput.focus();
-      return;
-    }
-    addScore(`correction-${state.correctionIndex}`, 300);
-    correctionInput.disabled = true;
-    correctionValidate.disabled = true;
-    setFeedback(correctionFeedback, "<strong>Réparation réussie !</strong> Tu as choisi la bonne touche par rapport au curseur.", "success");
-    state.correctionIndex += 1;
-    if (state.correctionIndex >= correctionTasks.length) {
-      addScore("correction-complete", 100);
-      correctionNext.disabled = false;
-      setFeedback(correctionFeedback, "<strong>Défi validé !</strong> Retour arrière efface à gauche ; Suppr efface à droite.", "success");
-    } else {
-      window.setTimeout(loadCorrectionTask, 750);
-    }
+  zoneNext.addEventListener("click", () => {
+    if (!state.zoneQuizStarted) {
+      state.zoneQuizStarted = true;
+      document.getElementById("zoneDesktop").hidden = true;
+      document.getElementById("zoneQuiz").hidden = false;
+      document.getElementById("zonePhaseLabel").textContent = "MANCHE 2 · COMPRENDS";
+      zoneStep.textContent = "?";
+      zonePrompt.innerHTML = "Lis chaque situation et choisis <strong>la réponse la plus précise.</strong>";
+      zoneNext.hidden = true;
+      setFeedback(zoneFeedback, "Tu peux recommencer tant que la réponse n’est pas juste.");
+      startZoneQuiz();
+    } else if (state.zoneQuizComplete) showScreen("challenge2");
   });
-  correctionNext.addEventListener("click", () => showScreen("challenge4"));
-  loadCorrectionTask();
 
-  // Défi 4 — caractères spéciaux
-  const symbolTasks = [
-    { goal: "@", modifier: "altgr", base: "0", note: "Alt Gr + 0 produit @ sur un clavier AZERTY." },
-    { goal: "€", modifier: "altgr", base: "e", note: "Alt Gr + E produit le symbole euro." },
-    { goal: "?", modifier: "shift", base: ",", note: "Maj + la touche virgule produit le point d’interrogation." },
-    { goal: ":", modifier: "none", base: ":", note: "Le deux-points est le premier signe de cette touche : aucun modificateur." },
-    { goal: "/", modifier: "shift", base: ":", note: "Maj + la touche deux-points produit la barre oblique /." }
+  // Défi 2 — manipuler les fenêtres.
+  const windowTasks = [
+    "Fais un <strong>double-clic</strong> sur le dossier « Enquête » pour l’ouvrir.",
+    "Clique sur <strong>□</strong> pour agrandir la fenêtre.",
+    "Clique sur <strong>—</strong> pour réduire la fenêtre dans la barre des tâches.",
+    "Retrouve la fenêtre : clique sur <strong>📁 Enquête</strong> dans la barre des tâches.",
+    "Passe à une autre fenêtre : clique sur <strong>📝 Notes</strong> dans la barre des tâches.",
+    "Clique sur <strong>×</strong> pour fermer la fenêtre Notes."
   ];
-  const symbolGoal = document.getElementById("symbolGoal");
-  const symbolDisplay = document.getElementById("symbolDisplay");
-  const symbolStep = document.getElementById("symbolStep");
-  const symbolActionPrompt = document.getElementById("symbolActionPrompt");
-  const symbolHintText = document.getElementById("symbolHintText");
-  const directSymbolNote = document.getElementById("directSymbolNote");
-  const symbolFeedback = document.getElementById("symbolFeedback");
-  const comboResult = document.getElementById("comboResult").querySelector("strong");
-  const symbolNext = document.getElementById("symbolNext");
-  const modifierLabels = { none: "Touche seule", shift: "Maj", altgr: "Alt Gr" };
-  const baseLabels = { "0": "0 / à / @", e: "E / €", ",": ", / ?", ":": ": / /" };
+  const folderWindow = document.getElementById("folderWindow");
+  const notesWindow = document.getElementById("notesWindow");
+  const folderTask = document.getElementById("folderTask");
+  const notesTask = document.getElementById("notesTask");
+  const windowPrompt = document.getElementById("windowPrompt");
+  const windowStep = document.getElementById("windowStep");
+  const windowFeedback = document.getElementById("windowFeedback");
+  const windowNext = document.getElementById("windowNext");
 
-  function loadSymbolTask() {
-    const task = symbolTasks[state.symbolIndex];
-    const isDirect = task.modifier === "none";
-    state.selectedModifier = isDirect ? "none" : null;
-    symbolGoal.textContent = task.goal;
-    symbolDisplay.textContent = task.goal;
-    symbolStep.textContent = String(state.symbolIndex + 1);
-    symbolActionPrompt.innerHTML = isDirect
-      ? `Pour écrire <strong class="symbol-goal">${task.goal}</strong>, ne maintiens aucune touche : clique directement sur la touche où le symbole est dessiné.`
-      : `Pour écrire <strong class="symbol-goal">${task.goal}</strong>, sélectionne d’abord la touche à maintenir, puis la touche où le symbole est dessiné.`;
-    symbolHintText.textContent = isDirect
-      ? "Le symbole est le caractère principal : aucune touche à maintenir."
-      : task.modifier === "altgr"
-        ? "Le symbole est en bas à droite d’une touche."
-        : "Le symbole est écrit en haut d’une touche.";
-    directSymbolNote.classList.toggle("is-active", isDirect);
-    comboResult.textContent = isDirect ? "Aucune touche à maintenir · choisis la partie B" : "Commence par la partie A";
-    document.querySelectorAll("#modifierChoices button").forEach(button => {
-      button.classList.remove("is-selected");
-      button.disabled = isDirect;
-    });
-  }
-  document.getElementById("modifierChoices").addEventListener("click", event => {
-    const button = event.target.closest("[data-modifier]");
-    if (!button || state.symbolIndex >= symbolTasks.length) return;
-    state.selectedModifier = button.dataset.modifier;
-    document.querySelectorAll("#modifierChoices button").forEach(item => item.classList.toggle("is-selected", item === button));
-    comboResult.textContent = `${modifierLabels[state.selectedModifier]} + …`;
-  });
-  document.getElementById("symbolKeys").addEventListener("click", event => {
-    const button = event.target.closest("[data-base]");
-    if (!button || state.symbolIndex >= symbolTasks.length) return;
-    if (state.selectedModifier === null) {
-      applyPenalty("symbols", 20);
-      setFeedback(symbolFeedback, "Commence par la <strong>partie A</strong> : clique sur <strong>Maj</strong> ou <strong>Alt Gr</strong>.", "error");
-      return;
-    }
-    const task = symbolTasks[state.symbolIndex];
-    const base = button.dataset.base;
-    comboResult.textContent = state.selectedModifier === "none"
-      ? `${baseLabels[base]} · touche seule`
-      : `${modifierLabels[state.selectedModifier]} + ${baseLabels[base]}`;
-    if (state.selectedModifier !== task.modifier || base !== task.base) {
-      const modifierClue = task.modifier === "altgr" ? "Le symbole est écrit en troisième position sur une touche." : task.modifier === "shift" ? "Cherche le symbole écrit en haut de la touche." : "Le symbole est directement accessible.";
-      applyPenalty("symbols", 30);
-      setFeedback(symbolFeedback, `Cette combinaison ne produit pas ${task.goal}. ${modifierClue}`, "error");
-      return;
-    }
-    addScore(`symbol-${state.symbolIndex}`, 180);
-    comboResult.textContent += ` → ${task.goal}`;
-    setFeedback(symbolFeedback, `<strong>Bonne combinaison !</strong> ${task.note}`, "success");
-    state.symbolIndex += 1;
-    if (state.symbolIndex >= symbolTasks.length) {
-      addScore("symbols-complete", 100);
-      symbolNext.disabled = false;
-      symbolStep.textContent = "✓";
-      setFeedback(symbolFeedback, "<strong>Atelier validé !</strong> Tu sais lire les différents signes inscrits sur une touche.", "success");
+  function advanceWindow(expected, success) {
+    if (windowTasks[state.windowIndex] === undefined || expected !== state.windowIndex) return false;
+    state.attempts.windows++;
+    addPoints(`window-${state.windowIndex}`, 100);
+    state.windowIndex++;
+    setFeedback(windowFeedback, success, "success");
+    if (state.windowIndex === windowTasks.length) {
+      windowStep.textContent = "✓";
+      windowPrompt.innerHTML = "Tu sais manipuler une fenêtre. <strong>À toi de résoudre les incidents !</strong>";
+      windowNext.disabled = false;
+      windowNext.textContent = "Manche 2 →";
     } else {
-      window.setTimeout(loadSymbolTask, 700);
+      windowStep.textContent = String(state.windowIndex + 1);
+      windowPrompt.innerHTML = windowTasks[state.windowIndex];
+    }
+    return true;
+  }
+
+  let folderClickTimer;
+  document.getElementById("folderLauncher").addEventListener("dblclick", () => {
+    clearTimeout(folderClickTimer);
+    if (advanceWindow(0, "Dossier ouvert ! Un double-clic lance l’ouverture.")) {
+      folderWindow.hidden = false; folderWindow.classList.add("is-front"); folderTask.classList.add("is-active");
     }
   });
-  symbolNext.addEventListener("click", () => showScreen("challenge5"));
-  loadSymbolTask();
-
-  // Défi 5 — raccourcis
-  const shortcutTasks = [
-    { answer: "copy", prompt: "Pixel veut copier la phrase sélectionnée. Quelle commande utilise-t-il ?", line: "<mark>CODE LUMIÈRE</mark>", status: "La phrase est sélectionnée", success: "La sélection est copiée en mémoire." },
-    { answer: "paste", prompt: "Pixel veut placer le code copié à la ligne suivante. Quelle commande utilise-t-il ?", line: "CODE LUMIÈRE<br><span class='cursor'>|</span>", status: "Le curseur est à la ligne suivante", success: "Le code est collé sans avoir été retapé." },
-    { answer: "undo", prompt: "Pixel vient d’effacer le code par erreur. Quelle commande annule sa dernière action ?", line: "<del>CODE LUMIÈRE</del>", status: "Oups : le code vient d’être supprimé", success: "La dernière action est annulée : le code revient." },
-    { answer: "save", prompt: "Le document est terminé. Quelle commande enregistre les modifications ?", line: "CODE LUMIÈRE<br><small>Mission terminée.</small>", status: "● Modifications non enregistrées", success: "Le fichier est enregistré." }
+  document.getElementById("folderLauncher").addEventListener("click", () => {
+    if (state.windowIndex !== 0) return;
+    clearTimeout(folderClickTimer);
+    folderClickTimer = setTimeout(() => {
+      if (state.windowIndex !== 0) return;
+      recordMistake("windows", "window-0");
+      setFeedback(windowFeedback, "C’était un clic simple. Essaie deux clics rapides, sans bouger la souris.", "error");
+    }, 280);
+  });
+  folderWindow.querySelector("[data-window-action='maximize']").addEventListener("click", () => {
+    if (advanceWindow(1, "Fenêtre agrandie ! Elle utilise presque tout l’écran.")) folderWindow.classList.add("is-maximized");
+    else if (state.windowIndex < windowTasks.length) { recordMistake("windows", `window-${state.windowIndex}`); setFeedback(windowFeedback, "Ce n’est pas encore la commande demandée. Relis la consigne.", "error"); }
+  });
+  folderWindow.querySelector("[data-window-action='minimize']").addEventListener("click", () => {
+    if (advanceWindow(2, "Fenêtre réduite ! Elle reste ouverte dans la barre des tâches.")) { folderWindow.hidden = true; folderTask.classList.remove("is-active"); }
+    else if (state.windowIndex < windowTasks.length) { recordMistake("windows", `window-${state.windowIndex}`); setFeedback(windowFeedback, "Cette commande ne correspond pas à l’étape actuelle.", "error"); }
+  });
+  folderTask.addEventListener("click", () => {
+    if (advanceWindow(3, "Fenêtre retrouvée ! La barre des tâches sert aussi à cela.")) { folderWindow.hidden = false; folderWindow.classList.add("is-front"); folderTask.classList.add("is-active"); }
+    else if (state.windowIndex > 3) { folderWindow.hidden = false; notesWindow.classList.remove("is-front"); folderWindow.classList.add("is-front"); folderTask.classList.add("is-active"); notesTask.classList.remove("is-active"); }
+    else if (state.windowIndex < windowTasks.length) { recordMistake("windows", `window-${state.windowIndex}`); setFeedback(windowFeedback, "Ce bouton ne réalise pas encore l’action demandée.", "error"); }
+  });
+  notesTask.addEventListener("click", () => {
+    if (state.windowIndex === 4) {
+      notesWindow.hidden = false; folderWindow.classList.remove("is-front"); notesWindow.classList.add("is-front"); folderTask.classList.remove("is-active"); notesTask.classList.add("is-active");
+      advanceWindow(4, "Changement réussi ! La fenêtre active passe devant les autres.");
+    } else if (state.windowIndex < windowTasks.length) { recordMistake("windows", `window-${state.windowIndex}`); setFeedback(windowFeedback, "Pas encore : suis l’ordre indiqué au-dessus du bureau.", "error"); }
+  });
+  document.querySelector("[data-note-close]").addEventListener("click", () => {
+    if (advanceWindow(5, "Fenêtre fermée ! Le bouton × termine l’application.")) { notesWindow.hidden = true; notesTask.classList.remove("is-active"); folderWindow.classList.add("is-front"); folderTask.classList.add("is-active"); }
+  });
+  folderWindow.querySelector("[data-window-action='close']").addEventListener("click", () => {
+    if (state.windowIndex < 6) { recordMistake("windows", `window-${state.windowIndex}`); setFeedback(windowFeedback, "Attention : ce bouton fermerait le dossier. Suis la consigne affichée.", "error"); }
+  });
+  const windowQuizItems = [
+    { context: "Tu veux lire un long document sans être gêné.", question: "Quelle commande utilise tout l’écran ?", answers: ["Réduire —", "Agrandir □", "Fermer ×", "Clic droit"], correct: 1, hint: "Le symbole ressemble à un carré.", explanation: "Exact : □ agrandit la fenêtre pour offrir plus d’espace." },
+    { context: "Tu dois regarder le bureau, puis revenir au document.", question: "Quelle action garde le document ouvert ?", answers: ["Le réduire", "Le fermer", "Éteindre l’écran", "Le supprimer"], correct: 0, hint: "L’application doit rester dans la barre des tâches.", explanation: "Bien joué : réduire cache temporairement la fenêtre sans fermer le document." },
+    { context: "Writer et le navigateur sont ouverts en même temps.", question: "Comment passer rapidement de l’un à l’autre ?", answers: ["Les fermer", "Cliquer leurs boutons dans la barre des tâches", "Redémarrer", "Double-cliquer sur le fond"], correct: 1, hint: "Les applications ouvertes sont visibles tout en bas.", explanation: "Oui : la barre des tâches permet de choisir la fenêtre active." },
+    { context: "Le travail est enregistré et l’application ne sert plus.", question: "Quel bouton termine la fenêtre ?", answers: ["—", "□", "×", "⊞"], correct: 2, hint: "Ce symbole est placé tout à droite de la barre de titre.", explanation: "Exact : × ferme la fenêtre. On vérifie d’abord que le travail est enregistré." }
   ];
-  const shortcutPrompt = document.getElementById("shortcutPrompt");
-  const shortcutStep = document.getElementById("shortcutStep");
-  const shortcutFeedback = document.getElementById("shortcutFeedback");
-  const shortcutNext = document.getElementById("shortcutNext");
-  const editorLine = document.getElementById("editorLine");
-  const saveState = document.getElementById("saveState");
+  const startWindowQuiz = createQuiz({
+    arena: document.getElementById("windowQuiz"), count: document.getElementById("windowQuizCount"),
+    context: document.getElementById("windowQuizContext"), question: document.getElementById("windowQuizQuestion"), answers: document.getElementById("windowQuizAnswers"),
+    feedback: windowFeedback, items: windowQuizItems, keyPrefix: "window-quiz", skill: "windows", noun: "Incident",
+    onComplete: () => {
+      state.windowQuizComplete = true;
+      windowStep.textContent = "✓";
+      windowPrompt.innerHTML = "Tu sais manipuler une fenêtre <strong>et choisir la bonne commande.</strong>";
+      setFeedback(windowFeedback, "Défi 2 terminé : commandes validées !", "success");
+      windowNext.hidden = false; windowNext.disabled = false; windowNext.textContent = "Défi suivant →";
+    }
+  });
+  windowNext.addEventListener("click", () => {
+    if (!state.windowQuizStarted) {
+      state.windowQuizStarted = true;
+      document.getElementById("windowDesktop").hidden = true;
+      document.getElementById("windowQuiz").hidden = false;
+      document.getElementById("windowPhaseLabel").textContent = "MANCHE 2 · RÉSOUS LES INCIDENTS";
+      windowStep.textContent = "?";
+      windowPrompt.innerHTML = "Choisis la commande qui convient <strong>sans perdre le travail.</strong>";
+      windowNext.hidden = true;
+      setFeedback(windowFeedback, "Prends le temps d’imaginer le résultat de chaque commande.");
+      startWindowQuiz();
+    } else if (state.windowQuizComplete) showScreen("challenge3");
+  });
 
-  function loadShortcutTask() {
-    const task = shortcutTasks[state.shortcutIndex];
-    shortcutPrompt.textContent = task.prompt;
-    shortcutStep.textContent = String(state.shortcutIndex + 1);
-    editorLine.innerHTML = task.line;
-    saveState.textContent = task.status;
-    saveState.classList.remove("saved");
-    document.querySelectorAll("#shortcutPad button").forEach(button => button.classList.remove("is-correct", "is-wrong"));
-  }
+  // Défi 3 — gestes de la souris.
+  const mouseTasks = [
+    "Fais un <strong>clic simple</strong> sur l’interrupteur.",
+    "Ouvre le coffre avec un <strong>double-clic</strong> rapide.",
+    "Fais un <strong>clic droit</strong> sur le fichier pour afficher son menu.",
+    "<strong>Glisse-dépose</strong> le fichier dans le dossier « À ranger »."
+  ];
+  const stages = [...document.querySelectorAll(".gesture-stage")];
+  const mousePrompt = document.getElementById("mousePrompt");
+  const mouseStep = document.getElementById("mouseStep");
+  const mouseFeedback = document.getElementById("mouseFeedback");
+  const mouseNext = document.getElementById("mouseNext");
+  let fileSelected = false;
 
-  function submitShortcut(answer) {
-    if (state.screen !== "challenge5" || state.shortcutIndex >= shortcutTasks.length) return;
-    const task = shortcutTasks[state.shortcutIndex];
-    const button = document.querySelector(`#shortcutPad [data-shortcut="${answer}"]`);
-    if (answer !== task.answer) {
-      button?.classList.add("is-wrong");
-      window.setTimeout(() => button?.classList.remove("is-wrong"), 450);
-      const labels = { copy: "copier", paste: "coller", undo: "annuler", save: "enregistrer" };
-      applyPenalty("shortcuts", 50);
-      setFeedback(shortcutFeedback, `Cette commande sert à <strong>${labels[answer]}</strong>. Relis précisément ce que Pixel veut faire.`, "error");
+  function advanceMouse(expected, success) {
+    if (state.mouseIndex !== expected) return;
+    state.attempts.mouse++;
+    addPoints(`mouse-${expected}`, 100);
+    state.mouseIndex++;
+    setFeedback(mouseFeedback, success, "success");
+    if (state.mouseIndex === mouseTasks.length) {
+      mouseStep.textContent = "✓";
+      mousePrompt.innerHTML = "Les quatre gestes sont maîtrisés. <strong>Choisis maintenant le bon au bon moment !</strong>";
+      mouseNext.disabled = false;
+      mouseNext.textContent = "Manche 2 →";
       return;
     }
-    button?.classList.add("is-correct");
-    if (answer === "copy") saveState.textContent = "✓ Copié dans la mémoire";
-    if (answer === "paste") editorLine.innerHTML = "CODE LUMIÈRE<br><mark>CODE LUMIÈRE</mark>";
-    if (answer === "undo") editorLine.innerHTML = "<mark>CODE LUMIÈRE</mark>";
-    if (answer === "save") { saveState.textContent = "✓ Toutes les modifications sont enregistrées"; saveState.classList.add("saved"); }
-    addScore(`shortcut-${state.shortcutIndex}`, 225);
-    setFeedback(shortcutFeedback, `<strong>Bonne commande !</strong> ${task.success}`, "success");
-    state.shortcutIndex += 1;
-    if (state.shortcutIndex >= shortcutTasks.length) {
-      addScore("shortcuts-complete", 100);
-      shortcutNext.disabled = false;
-      shortcutStep.textContent = "✓";
-      setFeedback(shortcutFeedback, "<strong>Poste de commande validé !</strong> C copie, V colle, Z annule et S sauvegarde.", "success");
-    } else {
-      window.setTimeout(loadShortcutTask, 750);
-    }
+    stages.forEach((stage, index) => stage.hidden = index !== state.mouseIndex);
+    mouseStep.textContent = String(state.mouseIndex + 1);
+    mousePrompt.innerHTML = mouseTasks[state.mouseIndex];
   }
-  document.getElementById("shortcutPad").addEventListener("click", event => {
-    const button = event.target.closest("[data-shortcut]");
-    if (button) submitShortcut(button.dataset.shortcut);
+
+  document.getElementById("clickTarget").addEventListener("click", event => { event.currentTarget.classList.add("on"); advanceMouse(0, "Clic simple réussi : un appui, une action."); });
+  let doubleClickTimer;
+  document.getElementById("doubleTarget").addEventListener("dblclick", event => { clearTimeout(doubleClickTimer); event.currentTarget.classList.add("open"); advanceMouse(1, "Double-clic réussi : le coffre est ouvert."); });
+  document.getElementById("doubleTarget").addEventListener("click", () => {
+    if (state.mouseIndex !== 1) return;
+    clearTimeout(doubleClickTimer);
+    doubleClickTimer = setTimeout(() => {
+      if (state.mouseIndex !== 1) return;
+      recordMistake("mouse", "mouse-1");
+      setFeedback(mouseFeedback, "Encore ! Deux clics très rapprochés ouvrent le coffre.", "error");
+    }, 280);
   });
-  document.addEventListener("keydown", event => {
-    if (state.screen !== "challenge5" || !event.ctrlKey) return;
-    const map = { c: "copy", v: "paste", z: "undo", s: "save" };
-    const answer = map[event.key.toLowerCase()];
-    if (answer) {
-      event.preventDefault();
-      submitShortcut(answer);
+  document.getElementById("rightTarget").addEventListener("contextmenu", event => { event.preventDefault(); document.getElementById("contextMenu").hidden = false; advanceMouse(2, "Clic droit réussi : le menu des actions apparaît."); });
+  document.getElementById("rightTarget").addEventListener("click", () => { if (state.mouseIndex === 2) { recordMistake("mouse", "mouse-2"); setFeedback(mouseFeedback, "Ce fichier attend un clic avec le bouton droit de la souris.", "error"); } });
+  const dragFile = document.getElementById("dragFile");
+  const dropFolder = document.getElementById("dropFolder");
+  dragFile.addEventListener("dragstart", event => { event.dataTransfer.setData("text/plain", "rapport.txt"); event.dataTransfer.effectAllowed = "move"; });
+  dropFolder.addEventListener("dragover", event => { event.preventDefault(); dropFolder.classList.add("over"); });
+  dropFolder.addEventListener("dragleave", () => dropFolder.classList.remove("over"));
+  dropFolder.addEventListener("drop", event => { event.preventDefault(); dropFolder.classList.remove("over"); dragFile.hidden = true; advanceMouse(3, "Glisser-déposer réussi : le fichier est rangé !"); });
+  dragFile.addEventListener("click", () => { fileSelected = true; dragFile.classList.add("is-selected"); setFeedback(mouseFeedback, "Fichier sélectionné. Clique maintenant sur le dossier pour le déplacer."); });
+  const fallbackDrop = () => {
+    if (fileSelected && state.mouseIndex === 3) { dragFile.hidden = true; advanceMouse(3, "Fichier rangé ! C’était la méthode de secours sans glissement."); }
+    else if (state.mouseIndex === 3) { recordMistake("mouse", "mouse-3"); setFeedback(mouseFeedback, "Sélectionne d’abord le fichier, puis déplace-le vers le dossier.", "error"); }
+  };
+  dropFolder.addEventListener("click", fallbackDrop);
+  dropFolder.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") fallbackDrop(); });
+  const mouseQuizItems = [
+    { context: "Tu veux sélectionner un bouton « Enregistrer ».", question: "Quel geste suffit ?", answers: ["Clic simple", "Double-clic", "Clic droit", "Glisser-déposer"], correct: 0, hint: "Un bouton se déclenche avec un seul appui.", explanation: "Exact : un clic simple suffit pour actionner un bouton." },
+    { context: "Tu veux ouvrir le dossier « TICE » depuis le bureau.", question: "Quel geste utilises-tu ?", answers: ["Clic simple", "Double-clic", "Clic droit", "Glisser-déposer"], correct: 1, hint: "Sur le bureau, ouvrir demande deux clics rapides.", explanation: "Bien vu : le double-clic ouvre le dossier." },
+    { context: "Tu veux afficher les actions possibles sur un fichier.", question: "Quel geste ouvre le menu contextuel ?", answers: ["Clic simple", "Double-clic", "Clic droit", "Glisser-déposer"], correct: 2, hint: "Le nom de ce menu contient le mot « contexte ».", explanation: "Exact : le clic droit affiche le menu contextuel." },
+    { context: "Tu veux ranger une image dans le dossier « Images ».", question: "Quel geste déplace l’élément ?", answers: ["Clic simple", "Double-clic", "Clic droit", "Glisser-déposer"], correct: 3, hint: "Il faut maintenir le bouton pendant le déplacement.", explanation: "Oui : on maintient, on glisse, puis on relâche dans le dossier." },
+    { context: "Tu veux placer le curseur dans une zone de texte.", question: "Quel geste est le plus direct ?", answers: ["Clic simple", "Double-clic", "Clic droit", "Glisser-déposer"], correct: 0, hint: "Il suffit de désigner l’endroit où écrire.", explanation: "Exact : un clic simple place le curseur dans le texte." },
+    { context: "Tu as ouvert un menu par erreur avec la souris.", question: "Quel geste simple peut le refermer ?", answers: ["Cliquer ailleurs", "Faire dix clics", "Faire glisser l’écran", "Éteindre l’ordinateur"], correct: 0, hint: "Une action légère suffit, sans fermer l’application.", explanation: "Parfait : un clic ailleurs referme généralement le menu." }
+  ];
+  const startMouseQuiz = createQuiz({
+    arena: document.getElementById("mouseQuiz"), count: document.getElementById("mouseQuizCount"),
+    context: document.getElementById("mouseQuizContext"), question: document.getElementById("mouseQuizQuestion"), answers: document.getElementById("mouseQuizAnswers"),
+    feedback: mouseFeedback, items: mouseQuizItems, keyPrefix: "mouse-quiz", skill: "mouse", noun: "Situation",
+    onComplete: () => {
+      state.mouseQuizComplete = true;
+      mouseStep.textContent = "✓";
+      mousePrompt.innerHTML = "Tu réalises les gestes <strong>et tu sais quand les utiliser.</strong>";
+      setFeedback(mouseFeedback, "Défi 3 terminé : gestes de souris validés !", "success");
+      mouseNext.hidden = false; mouseNext.disabled = false; mouseNext.textContent = "Défi bonus →";
     }
   });
-  shortcutNext.addEventListener("click", () => showScreen("bonus"));
-  loadShortcutTask();
+  mouseNext.addEventListener("click", () => {
+    if (!state.mouseQuizStarted) {
+      state.mouseQuizStarted = true;
+      document.querySelector(".gesture-lab").hidden = true;
+      document.getElementById("mouseQuiz").hidden = false;
+      document.getElementById("mousePhaseLabel").textContent = "MANCHE 2 · CHOISIS LE BON GESTE";
+      mouseStep.textContent = "?";
+      mousePrompt.innerHTML = "Lis la situation et choisis <strong>le geste le plus efficace.</strong>";
+      mouseNext.hidden = true;
+      setFeedback(mouseFeedback, "Certaines réponses se ressemblent : pense au résultat attendu.");
+      startMouseQuiz();
+    } else if (state.mouseQuizComplete) showScreen("bonus");
+  });
 
-  // Bonus chronométré
-  const bonusTasks = ["Robot n°4 : prêt ?", "Zoé : 18,5 € / 20", "contact@labo.example"];
-  const timerValue = document.getElementById("timerValue");
-  const timerDial = document.getElementById("timerDial");
-  const bonusRound = document.getElementById("bonusRound");
-  const bonusScore = document.getElementById("bonusScore");
-  const bonusModel = document.getElementById("bonusModel");
-  const bonusInput = document.getElementById("bonusInput");
-  const bonusValidate = document.getElementById("bonusValidate");
-  const startTimer = document.getElementById("startTimer");
+  // Bonus — raccourcis clavier simulés localement.
+  const sourceText = document.getElementById("sourceText");
+  const targetText = document.getElementById("targetText");
+  const keyboardPrompt = document.getElementById("keyboardPrompt");
+  const keyboardStep = document.getElementById("keyboardStep");
+  const keyboardFeedback = document.getElementById("keyboardFeedback");
   const finishButton = document.getElementById("finishButton");
-  const bonusFeedback = document.getElementById("bonusFeedback");
+  let copiedText = "";
+  const keyboardTasks = [
+    "Clique dans le message, puis appuie sur <kbd>Ctrl</kbd> + <kbd>A</kbd> pour tout sélectionner.",
+    "Garde le texte sélectionné et appuie sur <kbd>Ctrl</kbd> + <kbd>C</kbd> pour le copier.",
+    "Clique dans la boîte de transmission et appuie sur <kbd>Ctrl</kbd> + <kbd>V</kbd> pour coller."
+  ];
 
-  protectManualEntry(bonusInput, "bonus", bonusFeedback, "Le collage est bloqué pendant le chrono : tape chaque code au clavier.");
-
-  function updateBonusCount() {
-    bonusScore.textContent = `${state.bonusCodes} code${state.bonusCodes > 1 ? "s" : ""} validé${state.bonusCodes > 1 ? "s" : ""}`;
-  }
-  function stopBonus(message, success = false) {
-    window.clearInterval(state.timer);
-    state.timer = null;
-    state.bonusFinished = true;
-    bonusInput.disabled = true;
-    bonusValidate.hidden = true;
-    finishButton.disabled = false;
-    timerDial.classList.remove("is-running");
-    setFeedback(bonusFeedback, message, success ? "success" : "info");
-  }
-  function tickBonus() {
-    state.bonusSeconds -= 1;
-    timerValue.textContent = String(state.bonusSeconds);
-    timerDial.classList.toggle("is-low", state.bonusSeconds <= 10);
-    if (state.bonusSeconds <= 0) {
-      stopBonus(`Temps écoulé ! Tu as validé <strong>${state.bonusCodes} code${state.bonusCodes > 1 ? "s" : ""}</strong>. Ton score principal ne change pas.`);
+  function advanceKeyboard(expected, success) {
+    if (state.keyboardIndex !== expected) return;
+    state.attempts.keyboard++;
+    addPoints(`keyboard-${expected}`, expected === 2 ? 200 : 100);
+    state.keyboardIndex++;
+    setFeedback(keyboardFeedback, success, "success");
+    if (state.keyboardIndex === keyboardTasks.length) {
+      keyboardStep.textContent = "✓";
+      keyboardPrompt.innerHTML = "Les raccourcis sont acquis. <strong>Il reste une mission de saisie !</strong>";
+      finishButton.disabled = false;
+      finishButton.textContent = "Mission de saisie →";
+    } else {
+      keyboardStep.textContent = String(state.keyboardIndex + 1);
+      keyboardPrompt.innerHTML = keyboardTasks[state.keyboardIndex];
     }
   }
-  function startBonus() {
-    if (state.bonusStarted || state.bonusFinished) return;
-    state.bonusStarted = true;
-    bonusInput.disabled = false;
-    bonusInput.placeholder = "Écris ici…";
-    startTimer.hidden = true;
-    bonusValidate.hidden = false;
-    timerDial.classList.add("is-running");
-    state.timer = window.setInterval(tickBonus, 1000);
-    bonusInput.focus();
-    setFeedback(bonusFeedback, "Chrono lancé : reste précis, puis valide chaque code.");
-  }
-  function nextBonusTask() {
-    state.bonusIndex += 1;
-    if (state.bonusIndex >= bonusTasks.length) {
-      stopBonus(`<strong>Bonus parfait !</strong> Les 3 codes sont exacts avec ${state.bonusSeconds} seconde${state.bonusSeconds > 1 ? "s" : ""} restante${state.bonusSeconds > 1 ? "s" : ""}.`, true);
+
+  sourceText.addEventListener("keydown", event => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    const key = event.key.toLowerCase();
+    if (key === "a" && state.keyboardIndex === 0) {
+      event.preventDefault(); sourceText.select(); advanceKeyboard(0, "Tout le message est sélectionné.");
+    } else if (key === "c" && state.keyboardIndex === 1) {
+      event.preventDefault(); copiedText = sourceText.value.substring(sourceText.selectionStart, sourceText.selectionEnd);
+      if (copiedText === sourceText.value) advanceKeyboard(1, "Message copié dans la mémoire de cette page.");
+      else { recordMistake("keyboard", "keyboard-1"); setFeedback(keyboardFeedback, "Sélectionne d’abord tout le message avec Ctrl + A.", "error"); }
+    }
+  });
+  sourceText.addEventListener("copy", event => {
+    if (state.keyboardIndex !== 1) return;
+    copiedText = sourceText.value.substring(sourceText.selectionStart, sourceText.selectionEnd);
+    if (copiedText !== sourceText.value) {
+      recordMistake("keyboard", "keyboard-1");
+      setFeedback(keyboardFeedback, "Sélectionne d’abord tout le message avec Ctrl + A.", "error");
       return;
     }
-    bonusModel.textContent = bonusTasks[state.bonusIndex];
-    bonusRound.textContent = String(state.bonusIndex + 1);
-    bonusInput.value = "";
-    bonusInput.focus();
-  }
-  function resetBonus() {
-    window.clearInterval(state.timer);
-    state.timer = null;
-    state.bonusIndex = 0;
-    state.bonusSeconds = 60;
-    state.bonusStarted = false;
-    state.bonusFinished = false;
-    state.bonusCodes = 0;
-    timerValue.textContent = "60";
-    timerDial.classList.remove("is-running", "is-low");
-    bonusModel.textContent = bonusTasks[0];
-    bonusRound.textContent = "1";
-    bonusInput.value = "";
-    bonusInput.disabled = true;
-    bonusInput.placeholder = "Le chrono n’a pas commencé…";
-    startTimer.hidden = false;
-    bonusValidate.hidden = true;
-    finishButton.disabled = true;
-    updateBonusCount();
-    setFeedback(bonusFeedback, "Le bonus peut seulement ajouter des points. Il ne peut pas faire baisser ton score.");
-  }
-  startTimer.addEventListener("click", startBonus);
-  bonusInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      bonusValidate.click();
+    event.preventDefault();
+    if (event.clipboardData) event.clipboardData.setData("text/plain", copiedText);
+    advanceKeyboard(1, "Message copié dans la mémoire de cette page.");
+  });
+  targetText.addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v" && state.keyboardIndex === 2) {
+      event.preventDefault(); targetText.value = copiedText;
+      if (copiedText) advanceKeyboard(2, "Message collé : les trois raccourcis sont acquis !");
+      else { recordMistake("keyboard", "keyboard-2"); setFeedback(keyboardFeedback, "Rien n’a encore été copié. Reprends les étapes dans l’ordre.", "error"); }
     }
   });
-  bonusValidate.addEventListener("click", () => {
-    const target = bonusTasks[state.bonusIndex];
-    if (bonusInput.value !== target) {
-      const difference = firstDifference(bonusInput.value, target);
-      applyPenalty("bonus", 25);
-      setFeedback(bonusFeedback, `Pas encore exact : vérifie la position ${difference.index + 1}. Attendu ${describeChar(difference.expected)}.`, "error");
+  targetText.addEventListener("paste", event => {
+    if (state.keyboardIndex !== 2) return;
+    const pasted = copiedText || event.clipboardData?.getData("text/plain") || "";
+    if (!pasted) return;
+    event.preventDefault();
+    targetText.value = pasted;
+    advanceKeyboard(2, "Message collé : les trois raccourcis sont acquis !");
+  });
+
+  const typingPhrases = ["Bonjour Pixel !", "Je range mes fichiers dans le bon dossier."];
+  const typingArena = document.getElementById("typingArena");
+  const typingInput = document.getElementById("typingInput");
+  const typingModel = document.getElementById("typingModel");
+  const typingCount = document.getElementById("typingCount");
+  const typingCounter = document.getElementById("typingCounter");
+  const typingClue = document.getElementById("typingClue");
+  const typingValidate = document.getElementById("typingValidate");
+
+  typingInput.addEventListener("input", () => {
+    const length = [...typingInput.value].length;
+    typingCounter.textContent = `${length} caractère${length > 1 ? "s" : ""}`;
+    typingInput.classList.remove("has-error");
+  });
+
+  function prepareTypingPhrase(index) {
+    state.typingIndex = index;
+    state.typingReadyNext = false;
+    typingModel.textContent = typingPhrases[index];
+    typingCount.textContent = `Phrase ${index + 1} / ${typingPhrases.length}`;
+    typingInput.value = "";
+    typingInput.className = "typing-input";
+    typingCounter.textContent = "0 caractère";
+    typingClue.textContent = index === 0 ? "Attention à la majuscule et à l’espace avant !" : "Vérifie l’accent et le point final.";
+    typingValidate.textContent = "Vérifier ma phrase";
+    typingInput.focus();
+  }
+
+  typingValidate.addEventListener("click", () => {
+    if (state.typingReadyNext) {
+      prepareTypingPhrase(1);
       return;
     }
-    addScore(`bonus-${state.bonusIndex}`, 200);
-    state.bonusCodes += 1;
-    updateBonusCount();
-    setFeedback(bonusFeedback, `<strong>Code ${state.bonusIndex + 1} validé !</strong> Continue sans perdre ta précision.`, "success");
-    nextBonusTask();
+    const expected = typingPhrases[state.typingIndex];
+    if (typingInput.value !== expected) {
+      recordMistake("keyboard", `keyboard-typing-${state.typingIndex}`);
+      typingInput.classList.add("has-error");
+      const firstDifference = [...expected].findIndex((char, index) => char !== [...typingInput.value][index]);
+      typingClue.textContent = firstDifference < 0
+        ? (typingInput.value.length > expected.length ? "Il y a un caractère en trop à la fin." : "Il manque encore un ou plusieurs caractères.")
+        : `Regarde bien autour du caractère ${firstDifference + 1}.`;
+      setFeedback(keyboardFeedback, "Presque ! Compare les deux phrases caractère par caractère.", "error");
+      return;
+    }
+    typingInput.classList.add("is-correct");
+    addPoints(`keyboard-typing-${state.typingIndex}`, 300);
+    setFeedback(keyboardFeedback, "Saisie exacte : majuscules, espaces et ponctuation sont corrects !", "success");
+    if (state.typingIndex === 0) {
+      state.typingReadyNext = true;
+      typingValidate.textContent = "Phrase suivante →";
+    } else {
+      state.bonusComplete = true;
+      typingValidate.disabled = true;
+      keyboardStep.textContent = "✓";
+      keyboardPrompt.innerHTML = "Tu sais copier, coller et saisir avec précision. <strong>Bonus réussi !</strong>";
+      finishButton.disabled = false;
+      finishButton.textContent = "Voir mon bilan →";
+    }
   });
-  document.getElementById("skipBonus").addEventListener("click", () => {
-    stopBonus("Bonus passé. Aucun point n’est retiré : tu peux ouvrir ton bilan.");
-  });
 
-  // Bilan final
-  function renderFinal() {
-    renderRunningScore();
-    const coreCategories = ["keys", "typing", "correction", "symbols", "shortcuts"];
-    const coreScore = coreCategories.reduce((total, category) => total + categoryScore(category), 0);
-    const corePercent = Math.round((coreScore / 5000) * 100);
-    const bonusScoreFinal = categoryScore("bonus");
-    const totalMistakes = Object.values(state.mistakes).reduce((total, mistakes) => total + mistakes, 0);
-    const bonusComplete = state.bonusCodes === bonusTasks.length;
-    const starCount = corePercent >= 90 ? 3 : corePercent >= 70 ? 2 : 1;
-    const stars = `${"★ ".repeat(starCount)}${"☆ ".repeat(3 - starCount)}`.trim();
-    const levelFor = percent => percent >= 85
-      ? { label: "Maîtrisé", className: "mastered", icon: "✓" }
-      : percent >= 65
-        ? { label: "À consolider", className: "consolidate", icon: "↗" }
-        : { label: "À retravailler", className: "retry", icon: "↻" };
-
-    document.getElementById("starRow").textContent = stars;
-    document.getElementById("starRow").setAttribute("aria-label", `${starCount} étoile${starCount > 1 ? "s" : ""} sur 3`);
-    document.getElementById("finalScore").textContent = String(state.score);
-    document.getElementById("finalPercent").textContent = `${corePercent} %`;
-    document.getElementById("errorSummary").textContent = `${totalMistakes} erreur${totalMistakes > 1 ? "s" : ""} relevée${totalMistakes > 1 ? "s" : ""}`;
-    document.getElementById("rankBadge").textContent = corePercent >= 95 ? "Expert précis" : corePercent >= 85 ? "Clavier autonome" : corePercent >= 70 ? "En bonne voie" : "En entraînement";
-    document.getElementById("finalMessage").textContent = totalMistakes === 0
-      ? "Parcours sans erreur : ta précision est excellente."
-      : corePercent >= 85
-        ? "Très bon parcours : regarde le détail pour savoir où gagner encore en précision."
-        : "Mission terminée : le détail ci-dessous te montre exactement quoi retravailler.";
-
-    const reports = [
-      { category: "keys", title: "Défi 1 · Repérage", skill: "Je repère les touches et distingue Maj de Verr. Maj", badge: "⌨ Repéreur de touches" },
-      { category: "typing", title: "Défi 2 · Saisie exacte", skill: "Je recopie une chaîne au caractère près", badge: "✓ Saisie au caractère près" },
-      { category: "correction", title: "Défi 3 · Correction", skill: "Je corrige avec Retour arrière et Suppr", badge: "⌫ Correcteur méthodique" },
-      { category: "symbols", title: "Défi 4 · Symboles", skill: "Je produis @, €, ?, : et /", badge: "@ Artisan des symboles" },
-      { category: "shortcuts", title: "Défi 5 · Raccourcis", skill: "J’utilise Ctrl+C, Ctrl+V, Ctrl+Z et Ctrl+S", badge: "⚡ Ninja des raccourcis" }
+  function showFinal() {
+    showScreen("final");
+    const skillDefinitions = [
+      { key: "zones", prefix: "zone-", label: "Repérage", icon: "⌖", badge: "Œil de lynx", description: "Bureau, icônes, fenêtres et barre des tâches", advice: "Revoir le rôle des différentes zones de l’écran." },
+      { key: "windows", prefix: "window-", label: "Fenêtres", icon: "▣", badge: "Pilote de fenêtres", description: "Ouvrir, réduire, agrandir, fermer et changer de fenêtre", advice: "T’entraîner à distinguer réduire, agrandir et fermer." },
+      { key: "mouse", prefix: "mouse-", label: "Souris", icon: "↖", badge: "As de la souris", description: "Clic, double-clic, clic droit et glisser-déposer", advice: "Choisir le bon geste de souris selon le résultat attendu." },
+      { key: "keyboard", prefix: "keyboard-", label: "Clavier", icon: "⌨", badge: "Messager rapide", description: "Raccourcis Ctrl + A, C, V et saisie exacte", advice: "Soigner les majuscules, espaces, accents et signes de ponctuation." }
     ];
 
-    document.getElementById("skillsList").innerHTML = reports.map(report => {
-      const percent = Math.round((categoryScore(report.category) / categoryMax[report.category]) * 100);
-      const level = levelFor(percent);
-      return `<li class="${level.className}"><span>${level.icon}</span><div><strong>${report.skill}</strong><small>${level.label} · ${percent} %</small></div></li>`;
-    }).join("");
+    const pointsForKey = key => {
+      if (key.startsWith("keyboard-typing-")) return 300;
+      return key === "keyboard-2" ? 200 : 100;
+    };
+    const results = skillDefinitions.map(skill => {
+      const gross = [...state.awarded].filter(key => key.startsWith(skill.prefix)).reduce((sum, key) => sum + pointsForKey(key), 0);
+      const score = Math.max(0, gross - state.penalties[skill.key]);
+      const percent = Math.round(score / 10);
+      const errors = Math.round(state.penalties[skill.key] / ERROR_PENALTY);
+      const level = percent >= 80 ? "Acquis" : percent >= 60 ? "En bonne voie" : "À renforcer";
+      const levelClass = percent >= 80 ? "acquired" : percent >= 60 ? "progressing" : "reinforce";
+      return { ...skill, gross, score, percent, errors, level, levelClass };
+    });
 
-    const badges = reports.filter(report => categoryScore(report.category) >= 850).map(report => report.badge);
-    if (bonusComplete && bonusScoreFinal >= 480) badges.push("⏱ As du chrono");
-    document.getElementById("badgeShelf").innerHTML = `<h2>Badges obtenus</h2><div class="badge-list">${badges.length ? badges.map(badge => `<span class="badge">${badge}</span>`).join("") : '<p class="no-badge">Encore un peu d’entraînement pour décrocher ton premier badge.</p>'}</div>`;
+    const finalScore = getScore();
+    const finalPercent = Math.round(finalScore / MAX_SCORE * 100);
+    document.getElementById("finalScore").textContent = finalScore;
+    document.getElementById("finalPercent").textContent = `${finalPercent} %`;
+    const stars = finalPercent >= 90 ? 3 : finalPercent >= 75 ? 2 : finalPercent >= 60 ? 1 : 0;
+    document.getElementById("starRow").textContent = `${"★ ".repeat(stars)}${"☆ ".repeat(3 - stars)}`.trim();
+    const rank = finalPercent >= 90 ? "Maître du bureau" : finalPercent >= 75 ? "Pilote numérique" : finalPercent >= 60 ? "Explorateur du bureau" : "Apprenti explorateur";
+    document.getElementById("rankBadge").textContent = rank;
+    document.getElementById("errorSummary").textContent = `${state.errors} erreur${state.errors > 1 ? "s" : ""} corrigée${state.errors > 1 ? "s" : ""}`;
+    document.getElementById("totalErrors").textContent = state.errors;
+    document.getElementById("reportDate").textContent = new Intl.DateTimeFormat("fr-FR").format(new Date());
+    document.getElementById("finalMessage").textContent = finalPercent >= 90
+      ? "Excellente maîtrise : tu observes, tu choisis et tu agis avec précision."
+      : finalPercent >= 75
+        ? "Mission réussie : tes bases sont solides et quelques gestes peuvent encore gagner en précision."
+        : finalPercent >= 60
+          ? "Bon début : tu as compris l’essentiel, mais certaines commandes méritent encore un entraînement."
+          : "Tu as terminé la mission : appuie-toi sur le bilan pour revoir les gestes qui restent fragiles.";
 
-    const reportRows = reports.map(report => {
-      const score = categoryScore(report.category);
-      const percent = Math.round((score / categoryMax[report.category]) * 100);
-      const level = levelFor(percent);
-      const mistakes = state.mistakes[report.category];
-      return `<article class="result-row ${level.className}">
-        <div class="result-row__head"><strong>${report.title}</strong><span>${score} / ${categoryMax[report.category]} pts</span></div>
-        <div class="result-meter" role="progressbar" aria-label="${report.title}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
-        <div class="result-row__meta"><span>${percent} %</span><span>${mistakes} erreur${mistakes > 1 ? "s" : ""}</span><strong>${level.label}</strong></div>
-      </article>`;
-    }).join("");
+    document.getElementById("skillsList").innerHTML = results.map(result => `
+      <li class="skill-result ${result.levelClass}">
+        <span class="skill-icon">${result.icon}</span>
+        <div class="skill-copy"><strong>${result.label}</strong><small>${result.percent} % · ${result.level}</small><span class="skill-meter"><i style="width:${result.percent}%"></i></span></div>
+      </li>`).join("");
 
-    document.getElementById("resultDetails").innerHTML = `
-      <div class="details-heading"><div><p class="eyebrow">BILAN PAR DÉFI</p><h2>Ce que je maîtrise, ce que je retravaille</h2></div><div class="core-score"><strong>${coreScore}</strong><span>/ 5000 pts essentiels</span></div></div>
-      <div class="result-breakdown">${reportRows}</div>
-      <div class="bonus-summary"><span>⏱ Bonus chrono</span><strong>${bonusScoreFinal} / 600 pts</strong><small>${state.mistakes.bonus} erreur${state.mistakes.bonus > 1 ? "s" : ""} · ${state.bonusCodes} code${state.bonusCodes > 1 ? "s" : ""} exact${state.bonusCodes > 1 ? "s" : ""}</small></div>
-      <p class="scoring-note"><strong>Comment le score fonctionne :</strong> une erreur retire 20 à 50 points selon l’exercice. Le malus est limité à 500 points par défi. Ouvrir une aide ne retire jamais de point.</p>`;
+    document.getElementById("badgeShelf").innerHTML = results.map(result => `
+      <div class="report-badge ${result.percent >= 80 ? "earned" : "locked"}"><span>${result.icon}</span><strong>${result.badge}</strong><small>${result.percent >= 80 ? "Obtenu" : "À débloquer"}</small></div>`).join("") +
+      `<div class="report-badge earned"><span>${state.errors === 0 ? "★" : "↻"}</span><strong>${state.errors === 0 ? "Sans faute" : "Persévérant"}</strong><small>${state.errors === 0 ? "Aucune erreur" : `${state.errors} erreur${state.errors > 1 ? "s" : ""} corrigée${state.errors > 1 ? "s" : ""}`}</small></div>`;
+
+    const strongest = [...results].sort((a, b) => b.percent - a.percent)[0];
+    const weakest = [...results].sort((a, b) => a.percent - b.percent)[0];
+    document.getElementById("strengthText").textContent = `${strongest.label} : ${strongest.percent} %. ${strongest.description}.`;
+    document.getElementById("goalText").textContent = weakest.percent >= 90
+      ? "Conserver cette méthode : lire la consigne, observer, agir puis vérifier."
+      : weakest.advice;
+
+    document.getElementById("reportTableBody").innerHTML = results.map(result => `
+      <tr>
+        <th scope="row"><span class="table-icon">${result.icon}</span>${result.label}</th>
+        <td>${result.description}</td>
+        <td><strong>${result.score} / 1000</strong><small>${result.percent} %</small></td>
+        <td>${result.errors}</td>
+        <td><span class="level-tag ${result.levelClass}">${result.level}</span></td>
+      </tr>`).join("");
   }
   finishButton.addEventListener("click", () => {
-    renderFinal();
-    showScreen("final");
+    if (!state.typingStarted) {
+      state.typingStarted = true;
+      document.querySelector(".keyboard-lab").hidden = true;
+      typingArena.hidden = false;
+      document.getElementById("keyboardPhaseLabel").textContent = "MANCHE 2 · SAISIS AVEC PRÉCISION";
+      keyboardStep.textContent = "⌨";
+      keyboardPrompt.innerHTML = "Recopie deux phrases <strong>exactement comme le modèle.</strong>";
+      finishButton.disabled = true;
+      finishButton.textContent = "Voir mon bilan →";
+      setFeedback(keyboardFeedback, "Prends ton temps : chaque caractère compte.");
+      prepareTypingPhrase(0);
+    } else if (state.bonusComplete) showFinal();
   });
-  document.getElementById("restartButton").addEventListener("click", () => window.location.reload());
   document.getElementById("printButton").addEventListener("click", () => window.print());
-
-  // Aides contextuelles
-  const helpContent = {
-    keys: {
-      title: "Repérer les touches importantes",
-      html: `<div class="help-card amber-help"><strong>Regarde les bords du clavier.</strong> Les grandes touches de commande sont souvent placées à gauche, à droite ou tout en bas.</div>
-        <ul><li><kbd>Entrée</kbd> valide ou va à la ligne.</li><li><kbd>Maj</kbd> est maintenue pour une seule majuscule.</li><li><kbd>Verr. Maj</kbd> reste active : un voyant peut s’allumer.</li><li><kbd>⌫</kbd> efface à gauche ; <kbd>Suppr</kbd> efface à droite.</li><li><kbd>Ctrl</kbd> et <kbd>Alt Gr</kbd> se combinent avec d’autres touches.</li></ul>`
-    },
-    typing: {
-      title: "Recopier sans perdre un signe",
-      html: `<div class="help-card amber-help"><strong>Pour écrire É avec Alt + 144 :</strong><ol><li>Vérifie que <kbd>Verr. Num</kbd> est activé.</li><li>Garde la touche <kbd>Alt</kbd> enfoncée.</li><li>Sur le <strong>pavé numérique</strong>, tape <kbd>1</kbd> <kbd>4</kbd> <kbd>4</kbd>.</li><li>Relâche <kbd>Alt</kbd> : le caractère <strong>É</strong> apparaît.</li></ol><small>Les chiffres situés en haut du clavier ne fonctionnent pas pour ce raccourci.</small></div>
-        <ol><li>Lis le modèle une première fois sans écrire.</li><li>Recopie par petits groupes de 3 à 5 caractères.</li><li>Compare de gauche à droite.</li><li>Vérifie les espaces avant et après <strong>:</strong>, <strong>€</strong>, <strong>-</strong> et <strong>/</strong>.</li></ol>
-        <div class="help-card"><strong>Les signes du premier code :</strong><div class="key-demo"><kbd>Maj</kbd> + <kbd>)</kbd><span>→ °</span></div><div class="key-demo"><kbd>Alt Gr</kbd> + <kbd>0</kbd><span>→ @</span></div><div class="key-demo"><kbd>Alt Gr</kbd> + <kbd>E</kbd><span>→ €</span></div><div class="key-demo"><kbd>Maj</kbd> + <kbd>,</kbd><span>→ ?</span></div><div class="key-demo"><kbd>Maj</kbd> + <kbd>:</kbd><span>→ /</span></div></div>
-        <div class="help-card"><strong>Pour le tiret - :</strong> utilise la touche du tiret simple ou la touche <kbd>-</kbd> du pavé numérique. Les deux sont acceptées.</div>
-        <div class="help-card purple-help">Dans le deuxième code, le signe <strong>"</strong> s’obtient avec la touche <kbd>3 / "</kbd> sans Maj. La phrase commence par un A sans accent.</div>
-        <div class="help-card">Le message d’erreur donne la position de la première différence. Compte calmement jusqu’à cet endroit.</div>`
-    },
-    correction: {
-      title: "Choisir Retour arrière ou Suppr",
-      html: `<div class="key-demo"><kbd>texteX|</kbd><span>+</span><kbd>⌫</kbd><span>→ efface X à gauche</span></div><div class="key-demo"><kbd>texte|X</kbd><span>+</span><kbd>Suppr</kbd><span>→ efface X à droite</span></div><div class="help-card purple-help"><strong>Le trait | représente le curseur.</strong> Clique d’abord exactement à l’endroit où tu veux corriger.</div>`
-    },
-    symbols: {
-      title: "Lire les signes dessinés sur une touche",
-      html: `<div class="help-card amber-help"><strong>Dans l’activité :</strong> choisis d’abord <kbd>Maj</kbd> ou <kbd>Alt Gr</kbd> dans la partie A, puis clique sur la touche dessinée dans la partie B. Pour le signe <strong>:</strong>, la partie A se désactive : clique directement sur sa touche.</div><ul><li>Le signe principal, écrit en bas à gauche, s’écrit avec la touche seule.</li><li>Le signe écrit en haut s’obtient en maintenant <kbd>Maj</kbd>.</li><li>Le signe écrit en bas à droite s’obtient en maintenant <kbd>Alt Gr</kbd>.</li></ul><div class="key-demo"><kbd>Alt Gr</kbd><span>+</span><kbd>0 / à / @</kbd><span>→ @</span></div><div class="key-demo"><kbd>Alt Gr</kbd><span>+</span><kbd>E / €</kbd><span>→ €</span></div><div class="key-demo"><kbd>Maj</kbd><span>+</span><kbd>, / ?</kbd><span>→ ?</span></div><div class="key-demo"><kbd>:</kbd><span>seule</span><span>→ :</span></div><div class="key-demo"><kbd>Maj</kbd><span>+</span><kbd>: / /</kbd><span>→ /</span></div>`
-    },
-    shortcuts: {
-      title: "Les quatre raccourcis essentiels",
-      html: `<div class="key-demo"><kbd>Ctrl</kbd> + <kbd>C</kbd><span>Copier</span></div><div class="key-demo"><kbd>Ctrl</kbd> + <kbd>V</kbd><span>Coller</span></div><div class="key-demo"><kbd>Ctrl</kbd> + <kbd>Z</kbd><span>Annuler la dernière action</span></div><div class="key-demo"><kbd>Ctrl</kbd> + <kbd>S</kbd><span>Sauvegarder</span></div><div class="help-card">Garde <kbd>Ctrl</kbd> enfoncée, appuie une fois sur la lettre, puis relâche les deux touches.</div>`
-    },
-    chrono: {
-      title: "Rester précis avec le chrono",
-      html: `<ul><li>Lis le code entier avant de lancer.</li><li>Écris par petits groupes.</li><li>Valide avec le bouton ou la touche Entrée.</li><li>Si tu te trompes, corrige seulement la zone indiquée.</li></ul><div class="help-card amber-help"><strong>Important :</strong> le copier-coller et le glisser-déposer sont bloqués. Une tentative retire 25 points du bonus, mais ne touche jamais au score principal.</div>`
-    },
-    welcome: {
-      title: "Comment fonctionne la mission ?",
-      html: `<p>Termine les cinq défis dans l’ordre. Chaque bonne action donne des points et débloque la suite.</p><div class="help-card"><strong>Tu peux ouvrir cette aide à tout moment.</strong> Utiliser un tutoriel est une bonne stratégie et ne retire aucun point.</div>`
-    }
-  };
-  const helpDialog = document.getElementById("helpDialog");
-  const helpTitle = document.getElementById("helpTitle");
-  const helpBody = document.getElementById("helpContent");
-  let lastHelpTrigger = null;
-
-  function openHelp(key) {
-    const help = helpContent[key] || helpContent.welcome;
-    helpTitle.textContent = help.title;
-    helpBody.innerHTML = help.html;
-    helpDialog.showModal();
-  }
-  document.querySelectorAll("[data-help]").forEach(button => button.addEventListener("click", () => {
-    lastHelpTrigger = button;
-    openHelp(button.dataset.help);
-  }));
-  document.getElementById("helpButton").addEventListener("click", event => {
-    lastHelpTrigger = event.currentTarget;
-    const map = { challenge1: "keys", challenge2: "typing", challenge3: "correction", challenge4: "symbols", challenge5: "shortcuts", bonus: "chrono" };
-    openHelp(map[state.screen] || "welcome");
-  });
-  function closeHelp() {
-    helpDialog.close();
-    lastHelpTrigger?.focus();
-  }
-  document.getElementById("closeHelp").addEventListener("click", closeHelp);
-  document.getElementById("gotItButton").addEventListener("click", closeHelp);
-  helpDialog.addEventListener("click", event => {
-    if (event.target === helpDialog) closeHelp();
-  });
-
-  // Préparation initiale
-  loadTypingTask();
-  resetBonus();
-  showToast("Mission prête : aucune donnée n’est envoyée sur Internet.");
+  document.getElementById("restartButton").addEventListener("click", () => window.location.reload());
 })();
