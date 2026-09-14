@@ -207,7 +207,8 @@
       <div class="keyboard-lab">
         <div class="message-panel">
           <label for="sourceText">Message de Pixel</label>
-          <textarea id="sourceText" rows="3">CODE PIXEL : MISSION RÉUSSIE !</textarea>
+          <textarea id="sourceText" rows="3" readonly aria-describedby="sourceProtection">CODE PIXEL : MISSION RÉUSSIE !</textarea>
+          <small class="protected-note" id="sourceProtection">🔒 Message protégé : il peut être sélectionné et copié, mais pas effacé.</small>
         </div>
         <div class="key-bridge" aria-hidden="true"><span>Ctrl</span><b>+</b><span>A</span><i>puis</i><span>Ctrl</span><b>+</b><span>C</span><i>puis</i><span>Ctrl</span><b>+</b><span>V</span></div>
         <div class="message-panel receiver">
@@ -223,6 +224,10 @@
         <input id="typingInput" class="typing-input" type="text" autocomplete="off" spellcheck="false" placeholder="Écris ici…">
         <div class="typing-meta"><span id="typingCounter">0 caractère</span><span id="typingClue">Observe chaque signe.</span></div>
         <button class="primary-button" id="typingValidate" type="button">Vérifier ma phrase</button>
+      </div>
+      <div class="bonus-tools">
+        <button class="reset-challenge-button" id="resetBonusButton" type="button">↻ Réinitialiser le défi bonus</button>
+        <span>À utiliser si une étape ne répond plus ou si une mauvaise manipulation bloque la mission.</span>
       </div>
       <p class="privacy-note">Tout reste dans cette page : rien n’est envoyé sur Internet.</p>
       <div class="feedback" id="keyboardFeedback" aria-live="polite">Le raccourci Ctrl + A signifie « tout sélectionner ».</div>

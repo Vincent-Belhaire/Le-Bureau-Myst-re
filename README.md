@@ -25,8 +25,12 @@ Ouvrir `index.html` dans un navigateur récent. Les trois fichiers `index.html`,
 
 Chaque grand défi comporte deux manches : une manipulation et un réinvestissement. Le score maximal est de 4 000 points, répartis également entre repérage, fenêtres, souris et clavier.
 
+À la dernière question de chaque manche, un seul bouton indique clairement la destination suivante (« Passer au défi Fenêtres », « Passer au défi Souris » ou « Passer au défi bonus ») et ouvre directement l’écran correspondant.
+
 Chaque erreur retire 25 points dans le domaine concerné. L’élève peut ensuite corriger sa réponse et poursuivre. Les aides ne retirent aucun point afin de valoriser le recours méthodique aux tutoriels.
 
 ## Bilan élève
 
 L’écran final présente le pourcentage global, le nombre d’erreurs corrigées, le niveau atteint dans chacun des quatre domaines, les badges obtenus, un point fort et un prochain objectif. L’élève peut renseigner son nom et sa classe avant d’utiliser le bouton **Imprimer mon bilan**. La feuille est mise en page pour une impression A4 en portrait.
+
+Dans le défi bonus, le message à copier est protégé contre l’effacement. Un bouton **Réinitialiser le défi bonus** restaure également le message, les raccourcis et la mission de saisie si une manipulation bloque l’élève. Les points et les erreurs déjà enregistrés restent conservés afin de garder un bilan fidèle.

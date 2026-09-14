@@ -92,7 +92,7 @@
     element.className = `feedback ${type}`.trim();
   }
 
-  function createQuiz({ arena, count, context, question, answers, feedback, items, keyPrefix, skill, noun, onComplete }) {
+  function createQuiz({ arena, count, context, question, answers, feedback, items, keyPrefix, skill, noun, endLabel, onComplete }) {
     let index = 0;
 
     function render() {
@@ -121,7 +121,7 @@
           const next = document.createElement("button");
           next.type = "button";
           next.className = "primary-button quiz-next";
-          next.textContent = index === items.length - 1 ? "Terminer la manche →" : `${noun} suivante →`;
+          next.textContent = index === items.length - 1 ? endLabel : `${noun} suivante →`;
           next.addEventListener("click", () => {
             index++;
             if (index >= items.length) onComplete();
@@ -206,12 +206,13 @@
     arena: document.getElementById("zoneQuiz"), count: document.getElementById("zoneQuizCount"),
     context: document.getElementById("zoneQuizContext"), question: document.getElementById("zoneQuizQuestion"), answers: document.getElementById("zoneQuizAnswers"),
     feedback: zoneFeedback, items: zoneQuizItems, keyPrefix: "zone-quiz", skill: "zones", noun: "Question",
+    endLabel: "Passer au défi Fenêtres →",
     onComplete: () => {
       state.zoneQuizComplete = true;
       zoneStep.textContent = "✓";
       zonePrompt.innerHTML = "Tu sais reconnaître les zones <strong>et expliquer leur rôle.</strong>";
       setFeedback(zoneFeedback, "Défi 1 terminé : repérage validé !", "success");
-      zoneNext.hidden = false; zoneNext.disabled = false; zoneNext.textContent = "Défi suivant →";
+      showScreen("challenge2");
     }
   });
   zoneNext.addEventListener("click", () => {
@@ -315,12 +316,13 @@
     arena: document.getElementById("windowQuiz"), count: document.getElementById("windowQuizCount"),
     context: document.getElementById("windowQuizContext"), question: document.getElementById("windowQuizQuestion"), answers: document.getElementById("windowQuizAnswers"),
     feedback: windowFeedback, items: windowQuizItems, keyPrefix: "window-quiz", skill: "windows", noun: "Incident",
+    endLabel: "Passer au défi Souris →",
     onComplete: () => {
       state.windowQuizComplete = true;
       windowStep.textContent = "✓";
       windowPrompt.innerHTML = "Tu sais manipuler une fenêtre <strong>et choisir la bonne commande.</strong>";
       setFeedback(windowFeedback, "Défi 2 terminé : commandes validées !", "success");
-      windowNext.hidden = false; windowNext.disabled = false; windowNext.textContent = "Défi suivant →";
+      showScreen("challenge3");
     }
   });
   windowNext.addEventListener("click", () => {
@@ -408,12 +410,13 @@
     arena: document.getElementById("mouseQuiz"), count: document.getElementById("mouseQuizCount"),
     context: document.getElementById("mouseQuizContext"), question: document.getElementById("mouseQuizQuestion"), answers: document.getElementById("mouseQuizAnswers"),
     feedback: mouseFeedback, items: mouseQuizItems, keyPrefix: "mouse-quiz", skill: "mouse", noun: "Situation",
+    endLabel: "Passer au défi bonus →",
     onComplete: () => {
       state.mouseQuizComplete = true;
       mouseStep.textContent = "✓";
       mousePrompt.innerHTML = "Tu réalises les gestes <strong>et tu sais quand les utiliser.</strong>";
       setFeedback(mouseFeedback, "Défi 3 terminé : gestes de souris validés !", "success");
-      mouseNext.hidden = false; mouseNext.disabled = false; mouseNext.textContent = "Défi bonus →";
+      showScreen("bonus");
     }
   });
   mouseNext.addEventListener("click", () => {
@@ -433,6 +436,7 @@
   // Bonus — raccourcis clavier simulés localement.
   const sourceText = document.getElementById("sourceText");
   const targetText = document.getElementById("targetText");
+  const keyboardLab = document.querySelector("#bonus .keyboard-lab");
   const keyboardPrompt = document.getElementById("keyboardPrompt");
   const keyboardStep = document.getElementById("keyboardStep");
   const keyboardFeedback = document.getElementById("keyboardFeedback");
@@ -560,6 +564,38 @@
     }
   });
 
+  document.getElementById("resetBonusButton").addEventListener("click", () => {
+    state.keyboardIndex = 0;
+    state.typingStarted = false;
+    state.typingIndex = 0;
+    state.typingReadyNext = false;
+    state.bonusComplete = false;
+    state.attempts.keyboard = 0;
+    copiedText = "";
+
+    sourceText.value = sourceText.defaultValue;
+    sourceText.setSelectionRange(0, 0);
+    targetText.value = "";
+    keyboardLab.hidden = false;
+    typingArena.hidden = true;
+    typingInput.value = "";
+    typingInput.className = "typing-input";
+    typingModel.textContent = typingPhrases[0];
+    typingCount.textContent = `Phrase 1 / ${typingPhrases.length}`;
+    typingCounter.textContent = "0 caractère";
+    typingClue.textContent = "Observe chaque signe.";
+    typingValidate.disabled = false;
+    typingValidate.textContent = "Vérifier ma phrase";
+
+    document.getElementById("keyboardPhaseLabel").textContent = "MANCHE 1 · RACCOURCIS";
+    keyboardStep.textContent = "1";
+    keyboardPrompt.innerHTML = keyboardTasks[0];
+    finishButton.disabled = true;
+    finishButton.textContent = "Voir mon bilan →";
+    setFeedback(keyboardFeedback, "Défi réinitialisé. Le message et toutes les étapes sont de nouveau prêts.", "success");
+    sourceText.focus();
+  });
+
   function showFinal() {
     showScreen("final");
     const skillDefinitions = [
@@ -631,7 +667,7 @@
   finishButton.addEventListener("click", () => {
     if (!state.typingStarted) {
       state.typingStarted = true;
-      document.querySelector(".keyboard-lab").hidden = true;
+      keyboardLab.hidden = true;
       typingArena.hidden = false;
       document.getElementById("keyboardPhaseLabel").textContent = "MANCHE 2 · SAISIS AVEC PRÉCISION";
       keyboardStep.textContent = "⌨";
